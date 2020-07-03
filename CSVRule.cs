@@ -7,6 +7,9 @@ namespace AMSGet
         Towing,
         Flight,
         Airline,
+        Aircraft,
+        Airport,
+        AircraftType,
         None
     }
     public class CSVRule

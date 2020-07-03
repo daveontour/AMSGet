@@ -40,7 +40,7 @@ namespace AMSGet
             [Option('f', "file", Required = false, HelpText = "File to save output to.")]
             public string FileName { get; set; }
 
-            [Option('c', "csv", Required = false, Default = false, HelpText = "Output in CSV format.")]
+            [Option('c', "csv", Required = false, HelpText = "Output in CSV format.")]
             public bool CSV { get; set; }
 
         }
@@ -72,6 +72,12 @@ namespace AMSGet
 
             [Option('f', "file", Required = false, HelpText = "File to save output to.")]
             public string FileName { get; set; }
+
+            [Option('c', "csv", Required = false, HelpText = "Output in CSV format.")]
+            public bool CSV { get; set; }
+
+            [Option('l', "linked", Required = false, Default = false, HelpText = "Include Linked Flights")]
+            public bool Linked { get; internal set; }
         }
 
 
@@ -133,7 +139,7 @@ namespace AMSGet
             [Option('f', "file", Required = false, HelpText = "File to save output to.")]
             public string FileName { get; set; }
 
-            [Option('c', "csv", Required = false, Default = false, HelpText = "Output in CSV format.")]
+            [Option('c', "csv", Required = false, HelpText = "Output in CSV format.")]
             public bool CSV { get; set; }
         }
 
@@ -163,6 +169,25 @@ namespace AMSGet
             public bool CSV { get; set; }
         }
 
+        [Verb("checkbasedata", HelpText = "Check the validity of the base data")]
+        public class CheckOptions
+        {
+
+            [Option('r', "rules", Default = "Rules.config", Required = false, HelpText = "The rules file for the base data")]
+            public string RulesFile { get; set; }
+
+            [Option('d', "delimiter", Default = "::", Required = false, HelpText = "The delimiter used in the rules file")]
+            public string Delimiter { get; set; }
+
+            [Option('f', "file", Required = false, Hidden = true, HelpText = "Read the data from rather than AMS directly")]
+            public bool DataFromFile { get; set; }
+
+            [Option(SetName = "showall", Required = false, Default = false, HelpText = "Show all messages, not just errors")]
+            public bool ShowAll { get; set; }
+
+
+        }
+
 
         [Verb("config", isDefault: true, HelpText = "Show the configuration")]
         public class Options
@@ -172,6 +197,19 @@ namespace AMSGet
 
             [Option('a', "ams", Required = false, HelpText = "Check the connection to AMS")]
             public bool CheckAMS { get; set; }
+
+            [Option('t', "token", Required = false, HelpText = "Set the AMS Access Token")]
+            public string Token { get; set; }
+
+            [Option("apt", Required = false, HelpText = "Set the IATA Airport Code for the Airport")]
+            public string AptCode { get; set; }
+
+            [Option("rest", Required = false, HelpText = "Set the AMS Rest Service URL")]
+            public string RestURL { get; set; }
+
+            [Option("ws", Required = false, HelpText = "Set the AMS Native Webservice Service URL")]
+            public string WSURL { get; set; }
+
         }
         static void Main(string[] args)
         {
@@ -184,7 +222,7 @@ namespace AMSGet
                 Console.WriteLine(ex.Message);
             }
 #if DEBUG
-            string[] arr = { "flights", "--from", "2020/06/01", "--to", "2020/06/30", "--csv" };
+            string[] arr = { "flight", "QR", "123", "--from", "2020/06/01", "--to", "2020/07/04", "--csv" };
             MyMain(arr);
             Console.WriteLine("Done");
             Console.ReadKey();
@@ -199,7 +237,7 @@ namespace AMSGet
 
             var parser = new Parser(with => with.HelpWriter = null);
 
-            var parserResult = parser.ParseArguments<Options, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, FlightOptions, FlightsOptions>(args);
+            var parserResult = parser.ParseArguments<Options, CheckOptions, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, FlightOptions, FlightsOptions>(args);
 
             parserResult.WithParsed<Options>(opts => ShowConfig(opts))
                .WithParsed<GatesOptions>(opts => GetGates(opts))
@@ -212,14 +250,21 @@ namespace AMSGet
                .WithParsed<FlightOptions>(opts => GetFlight(opts))
                .WithParsed<FlightsOptions>(opts => GetFlights(opts))
                .WithParsed<TowingsOptions>(opts => GetTowings(opts))
+               .WithParsed<CheckOptions>(opts => CheckBaseData(opts))
                .WithNotParsed(errs => DisplayHelp(parserResult, errs));
 
 
         }
 
+        private static void CheckBaseData(CheckOptions opts)
+        {
+            CheckAMSData check = new CheckAMSData(opts.ShowAll, opts.Delimiter, opts.RulesFile, opts.DataFromFile);
+            check.Start();
+        }
+
         static Func<string> dynamicData = () =>
         {
-            var line5 = "\nExamples:\n\namsget help flights\namsget flights --today\namsget flights --from 2020/06/30 --to 2020/07/07\namsget flight QF 001 --yesterday\namsget stand A10";
+            var line5 = "\nExamples:\n\namsget help flights\namsget flights --today\namsget flights --from 2020/06/30 --to 2020/07/07\namsget flights --from 2020/06/30 --to 2020/07/07 --csv -f flights.csv\namsget flight QF 001 --yesterday\namsget stand A10\namsget airlines\namsget checkbasedata";
             return $"{line5}";
         };
 
@@ -228,7 +273,7 @@ namespace AMSGet
         {
             var helpText = HelpText.AutoBuild(result, h =>
             {
-                h.Heading = "\nAMSGet - Utility to get data quickly from SITA AMS";
+                h.Heading = "\nAMSGet - Utility to get and check data quickly from SITA AMS";
                 h.Copyright = "Copyright 2020";
                 h.AdditionalNewLineAfterOption = false;
                 h.AddPostOptionsLine(dynamicData());
@@ -242,13 +287,7 @@ namespace AMSGet
         }
         private static void ShowConfig(Options opts)
         {
-            if (opts.Verbose)
-            {
-                Console.WriteLine($"\nAMS Rest Server URI:         {Parameters.AMS_REST_SERVICE_URI}");
-                Console.WriteLine($"AMS Web Services Server URI: {Parameters.AMS_WEB_SERVICE_URI}");
-                Console.WriteLine($"AMS Access Token:            {Parameters.TOKEN}");
-                Console.WriteLine($"Airport Code:                {Parameters.APT_CODE}");
-            }
+
 
             if (opts.CheckAMS)
             {
@@ -270,6 +309,54 @@ namespace AMSGet
                     Console.WriteLine("..AMS RestAPI Service NOT Available");
                 }
             }
+
+            if (opts.Token != null)
+            {
+                XElement config = ReadConfigFile();
+                XElement node = config.Descendants("add").FirstOrDefault(el => el.Attribute("key").Value == "Token");
+                node.Attribute("value").Value = opts.Token;
+                config.Save(@"AMSUtilLib.dll.config");
+            }
+            if (opts.AptCode != null)
+            {
+                XElement config = ReadConfigFile();
+                XElement node = config.Descendants("add").FirstOrDefault(el => el.Attribute("key").Value == "IATAAirportCode");
+                node.Attribute("value").Value = opts.AptCode;
+                config.Save(@"AMSUtilLib.dll.config");
+            }
+            if (opts.RestURL != null)
+            {
+                XElement config = ReadConfigFile();
+                XElement node = config.Descendants("add").FirstOrDefault(el => el.Attribute("key").Value == "AMSRestServiceURI");
+                node.Attribute("value").Value = opts.RestURL;
+                config.Save(@"AMSUtilLib.dll.config");
+            }
+            if (opts.WSURL != null)
+            {
+                XElement config = ReadConfigFile();
+                XElement node = config.Descendants("add").FirstOrDefault(el => el.Attribute("key").Value == "AMSWebServiceURI");
+                node.Attribute("value").Value = opts.WSURL;
+                config.Save(@"AMSUtilLib.dll.config");
+            }
+
+
+            Type type = typeof(Parameters);
+            System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+
+            if (opts.Verbose)
+            {
+                Console.WriteLine($"\nAMS Rest Server URI:         {Parameters.AMS_REST_SERVICE_URI}");
+                Console.WriteLine($"AMS Web Services Server URI: {Parameters.AMS_WEB_SERVICE_URI}");
+                Console.WriteLine($"AMS Access Token:            {Parameters.TOKEN}");
+                Console.WriteLine($"Airport Code:                {Parameters.APT_CODE}");
+            }
+
+        }
+
+        private static XElement ReadConfigFile()
+        {
+            XElement config = XElement.Load(@"AMSUtilLib.dll.config");
+            return config;
         }
         private static Tuple<DateTime, DateTime> GetFromToTime(bool today, bool yesterday, bool tomorrow, string from, string to)
         {
@@ -319,8 +406,6 @@ namespace AMSGet
         }
         private static int GetFlights(FlightsOptions opts)
         {
-            Console.WriteLine($"Get Flights  {opts.FileName}");
-
             if (!AMSTools.FileOK(opts.FileName))
             {
                 return -1;
@@ -343,21 +428,27 @@ namespace AMSGet
                     {
                         if (opts.Airline == null)
                         {
+                            // If there is no specific airline specified
 
                             if (opts.CSV)
                             {
-                                AMSTools.Out(GetCSV(res.OuterXml, "Flight", BaseType.Airline, ".//ams:FlightState"), opts.FileName);
+                                //Output in CSV format 
+                                AMSTools.Out(GetCSV(res.OuterXml, "Flight", BaseType.Flight, ".//ams:FlightState"), opts.FileName);
                             }
                             else
                             {
+                                //Output in XML format
                                 AMSTools.Out(AMSTools.PrintXML(res.OuterXml), opts.FileName);
                             }
                         }
                         else
                         {
+                            // A specifc airline was requested
                             XmlNamespaceManager nsmgr = new XmlNamespaceManager(res.OwnerDocument.NameTable);
                             nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
-                            AMSTools.Out("<Flights>", opts.FileName);
+
+                            string result = @"<Flights xmlns=""http://www.sita.aero/ams6-xml-api-datatypes>"">";
+
                             foreach (XmlElement el in res.SelectNodes("//ams:Flights/ams:Flight", nsmgr))
                             {
                                 {
@@ -367,7 +458,7 @@ namespace AMSGet
                                     XmlNode node = el.SelectSingleNode("//ams:FlightId/ams:AirlineDesignator[@codeContext='IATA']", nsmgr2);
                                     if (node?.InnerText == opts.Airline)
                                     {
-                                        AMSTools.Out(AMSTools.PrintXML(el.OuterXml), opts.FileName);
+                                        result += el.OuterXml;
                                     }
                                     else
                                     {
@@ -375,7 +466,18 @@ namespace AMSGet
                                     }
                                 }
                             }
-                            AMSTools.Out("</Flights>", opts.FileName);
+                            result += "</Flights>";
+
+                            if (opts.CSV)
+                            {
+                                //Output in CSV format 
+                                AMSTools.Out(GetCSV(result, "Flight", BaseType.Flight, ".//ams:FlightState"), opts.FileName);
+                            }
+                            else
+                            {
+                                //Output in XML format
+                                AMSTools.Out(AMSTools.PrintXML(result), opts.FileName);
+                            }
                         }
                     }
                 }
@@ -416,9 +518,6 @@ namespace AMSGet
             return 1;
 
         }
-
-
-
         private static int GetFlight(FlightOptions opts)
         {
             if (!AMSTools.FileOK(opts.FileName))
@@ -426,55 +525,21 @@ namespace AMSGet
                 return -1;
             }
 
-            if (!opts.Today && !opts.Tomorrow && !opts.Yesterday)
+            var t = GetFromToTime(opts.Today, opts.Yesterday, opts.Tomorrow, opts.From, opts.To);
+            if (t == null)
             {
-                opts.Today = true;
+                return -1;
             }
 
-            double offset = 0.0;
 
-            if (opts.Today)
-            {
-                offset = 0.0;
-            }
-            else if (opts.Yesterday)
-            {
-                offset = -1.0;
-            }
-            else if (opts.Tomorrow)
-            {
-                offset = 1.0;
-            }
-
-            double fromOffset = offset;
-            double toOffset = offset;
-
-            if (opts.From != null && opts.To != null)
-            {
-                DateTime fromTime;
-                DateTime.TryParse(opts.From, out fromTime);
-
-                DateTime toTime;
-                DateTime.TryParse(opts.To, out toTime);
-
-                if (toTime == null || fromTime == null)
-                {
-                    Console.WriteLine("Incorrectly formatted date");
-                    return -1;
-                }
-
-                if (toTime < fromTime)
-                {
-                    Console.WriteLine("To date is before from date");
-                    return -1;
-                }
-
-                fromOffset = (fromTime - DateTime.Now).TotalDays;
-                toOffset = (toTime - DateTime.Now).TotalDays;
-            }
+            double fromOffset = (t.Item1 - DateTime.Now).TotalDays;
+            double toOffset = (t.Item2 - DateTime.Now).TotalDays;
 
             int start = Convert.ToInt32(Math.Floor(fromOffset));
             int stop = Convert.ToInt32(Math.Ceiling(toOffset));
+
+
+            string result = @"<Flights xmlns=""http://www.sita.aero/ams6-xml-api-datatypes>"">";
 
             for (int off = start; off <= stop; off++)
             {
@@ -492,7 +557,7 @@ namespace AMSGet
                         if (!res.OuterXml.Contains("FLIGHT_NOT_FOUND"))
                         {
                             found = true;
-                            AMSTools.Out(AMSTools.PrintXML(res.OuterXml), opts.FileName);
+                            result += res.OuterXml;
                             Console.WriteLine($"Arrival Flight {opts.Airline}{opts.FlightNum} found for {date}");
                         }
                     }
@@ -510,7 +575,7 @@ namespace AMSGet
                         if (!res.OuterXml.Contains("FLIGHT_NOT_FOUND"))
                         {
                             found = true;
-                            AMSTools.Out(AMSTools.PrintXML(res.OuterXml), opts.FileName);
+                            result += res.OuterXml;
                             Console.WriteLine($"Departure Flight {opts.Airline}{opts.FlightNum} found for {date}");
                         }
                     }
@@ -524,6 +589,19 @@ namespace AMSGet
                 {
                     Console.WriteLine($"Flight {opts.Airline}{opts.FlightNum} not found for {date}");
                 }
+            }
+
+            result += "</Flights>";
+
+            if (opts.CSV)
+            {
+                //Output in CSV format 
+                AMSTools.Out(GetCSV(result, "Flight", BaseType.Flight, ".//ams:FlightState", opts.FlightNum, opts.Linked), opts.FileName);
+            }
+            else
+            {
+                //Output in XML format
+                AMSTools.Out(AMSTools.PrintXML(result), opts.FileName);
             }
 
             return 1;
@@ -639,7 +717,7 @@ namespace AMSGet
             return 1;
         }
 
-        private static string GetCSV(string xml, string tag, BaseType type, string propertyHead)
+        private static string GetCSV(string xml, string tag, BaseType type, string propertyHead, string flightID = null, bool includeLinked = false)
         {
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
@@ -650,10 +728,20 @@ namespace AMSGet
 
             foreach (XmlElement el in doc.GetElementsByTagName(tag))
             {
-                Dictionary<string, string> entry = new Dictionary<String, string>();
 
                 XmlNamespaceManager nsmgr = new XmlNamespaceManager(el.OwnerDocument.NameTable);
                 nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
+
+                if (tag == "Flight" && flightID != null && !includeLinked)
+                {
+                    string fn = el.SelectSingleNode(".//ams:FlightId/ams:FlightNumber", nsmgr).InnerText;
+                    if (flightID != fn)
+                    {
+                        continue;
+                    }
+                }
+
+                Dictionary<string, string> entry = new Dictionary<String, string>();
 
 
                 foreach (CSVRule rule in csvFormatList)
@@ -722,7 +810,6 @@ namespace AMSGet
 
             return csv;
         }
-
         private static void ReadRules()
         {
             try
@@ -754,5 +841,4 @@ namespace AMSGet
         }
 
     }
-
 }
