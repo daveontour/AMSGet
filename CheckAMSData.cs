@@ -9,22 +9,17 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace AMSGet
-{
-    public class Rule
-    {
+namespace AMSGet {
+    public class Rule {
         public BaseType type;
         public string regex;
         public string xpath;
         public string message;
         public bool valid = true;
 
-        public Rule(string[] entries)
-        {
-            try
-            {
-                switch (entries[0])
-                {
+        public Rule(string[] entries) {
+            try {
+                switch (entries[0]) {
                     case "Aircraft":
                         type = BaseType.Aircraft;
                         break;
@@ -37,6 +32,21 @@ namespace AMSGet
                     case "Airport":
                         type = BaseType.Airport;
                         break;
+                    case "Gate":
+                        type = BaseType.Gate;
+                        break;
+                    case "Stand":
+                        type = BaseType.Stand;
+                        break;
+                    case "Checkin":
+                        type = BaseType.Checkin;
+                        break;
+                    case "Carousel":
+                        type = BaseType.Carousel;
+                        break;
+                    case "":
+                        type = BaseType.Airport;
+                        break;
                     default:
                         type = BaseType.None;
                         break;
@@ -45,15 +55,12 @@ namespace AMSGet
                 xpath = entries[1];
                 regex = entries[2];
                 message = entries[3];
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 valid = false;
             }
         }
     }
-    class CheckAMSData
-    {
+    class CheckAMSData {
         private readonly List<Rule> ruleList = new List<Rule>();
         private string GETAIRPORTSTemplate = @"<soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns:ams6=""http://www.sita.aero/ams6-xml-api-webservice"">
 <soapenv:Header/>
@@ -97,10 +104,13 @@ namespace AMSGet
         private bool hasAirport = false;
         private bool hasAircraft = false;
         private bool hasAircraftType = false;
+        private bool hasCheckins = false;
+        private bool hasGates = false;
+        private bool hasStands = false;
+        private bool hasCarousels = false;
         private bool dataFromFile;
 
-        public CheckAMSData(bool showAll, string delimiter, string rules, bool dataFromFile)
-        {
+        public CheckAMSData(bool showAll, string delimiter, string rules, bool dataFromFile) {
 
             this.delimiter = delimiter;
             this.rulesFile = rules;
@@ -110,11 +120,9 @@ namespace AMSGet
         }
 
 
-        public void Start()
-        {
+        public void Start() {
             ReadRules();
-            if (this.ruleList.Count == 0)
-            {
+            if (this.ruleList.Count == 0) {
                 return;
             }
 
@@ -122,61 +130,73 @@ namespace AMSGet
             checkTask.Wait();
         }
 
-        public async Task Execute()
-        {
-            if (dataFromFile)
-            {
+        public async Task Execute() {
+            if (dataFromFile) {
                 Console.WriteLine("\n======> Reading Data from files <==========");
-            }
-            else
-            {
+            } else {
                 Console.WriteLine("\n======> Checking AMS Access <==========");
                 bool amsOK = AMSTools.IsAMSWebServiceAvailable().Result;
-                if (!amsOK)
-                {
+                if (!amsOK) {
                     Console.WriteLine("======> Error: Cannot access AMS <==========");
                     Console.WriteLine("\nHit Any Key to Exit..");
                     Console.ReadKey();
                     return;
-                }
-                else
-                {
+                } else {
                     Console.WriteLine("======> AMS Access Confirmed <==========");
                 }
             }
 
-            try
-            {
-                if (hasAirport)
-                {
+            try {
+                if (hasAirport) {
                     Console.WriteLine("\n======> Checking Airports <==========");
                     XmlElement airports = await GetXML(GETAIRPORTSTemplate, Parameters.TOKEN, "http://www.sita.aero/ams6-xml-api-webservice/IAMSIntegrationService/GetAirports", Parameters.AMS_WEB_SERVICE_URI, "airports.xml");
                     Check(airports, "//ams:Airport", "./ams:AirportState/ams:Value[@propertyName='Name']", BaseType.Airport);
                 }
 
-                if (hasAirline)
-                {
+                if (hasAirline) {
                     Console.WriteLine("\n======> Checking Airlines <==========");
                     XmlElement airlines = await GetXML(GETAIRLINESTemplate, Parameters.TOKEN, "http://www.sita.aero/ams6-xml-api-webservice/IAMSIntegrationService/GetAirlines", Parameters.AMS_WEB_SERVICE_URI, "airlines.xml");
                     Check(airlines, "//ams:Airline", "./ams:AirlineState/ams:Value[@propertyName='Name']", BaseType.Airline);
                 }
 
-                if (hasAircraft)
-                {
+                if (hasAircraft) {
                     Console.WriteLine("\n======> Checking Aircraft <==========");
                     XmlElement aircrafts = await GetXML(GETAIRCRAFTSTemplate, Parameters.TOKEN, "http://www.sita.aero/ams6-xml-api-webservice/IAMSIntegrationService/GetAircrafts", Parameters.AMS_WEB_SERVICE_URI, "aircrafts.xml");
                     Check(aircrafts, "//ams:Aircraft", "./ams:AircraftId/ams:Registration", BaseType.Aircraft);
                 }
 
-                if (hasAircraftType)
-                {
+                if (hasAircraftType) {
                     Console.WriteLine("\n======> Checking Aircraft Types <==========");
                     XmlElement actypes = await GetXML(GETAIRCRAFTTYPESSTemplate, Parameters.TOKEN, "http://www.sita.aero/ams6-xml-api-webservice/IAMSIntegrationService/GetAircraftTypes", Parameters.AMS_WEB_SERVICE_URI, "actypes.xml");
                     Check(actypes, "//ams:AircraftType", "./ams:AircraftTypeState/ams:Value[@propertyName='Name']", BaseType.AircraftType);
                 }
-            }
-            catch (Exception ex)
-            {
+
+                if (hasCheckins) {
+                    Console.WriteLine("\n======> Checking Checkins <==========");
+                    string uri = Parameters.AMS_REST_SERVICE_URI + $"{Parameters.APT_CODE}/CheckIns";
+                    string result = AMSTools.GetRestURI(uri).Result;
+                    Check(result, BaseType.Checkin);
+                }
+                if (hasGates) {
+                    Console.WriteLine("\n======> Checking Gates <==========");
+                    string uri = Parameters.AMS_REST_SERVICE_URI + $"{Parameters.APT_CODE}/Gates";
+                    string result = AMSTools.GetRestURI(uri).Result;
+                    Check(result, BaseType.Gate);
+                }
+                if (hasStands) {
+                    Console.WriteLine("\n======> Checking Stands <==========");
+                    string uri = Parameters.AMS_REST_SERVICE_URI + $"{Parameters.APT_CODE}/Stands";
+                    string result = AMSTools.GetRestURI(uri).Result;
+                    Check(result, BaseType.Stand);
+
+                }
+                if (hasCarousels) {
+                    Console.WriteLine("\n======> Checking Carousels <==========");
+                    string uri = Parameters.AMS_REST_SERVICE_URI + $"{Parameters.APT_CODE}/Carousels";
+                    string result = AMSTools.GetRestURI(uri).Result;
+                    Check(result, BaseType.Carousel);
+                }
+            } catch (Exception ex) {
                 Console.WriteLine(ex.Message);
                 Console.WriteLine("\nHit Any Key to Exit..");
                 Console.ReadKey();
@@ -187,46 +207,48 @@ namespace AMSGet
         }
 
 
-        public void ReadRules()
-        {
-            try
-            {
-                using (TextFieldParser parser = new TextFieldParser(rulesFile))
-                {
+        public void ReadRules() {
+            try {
+                using (TextFieldParser parser = new TextFieldParser(rulesFile)) {
                     parser.TextFieldType = FieldType.Delimited;
                     parser.SetDelimiters(delimiter);
 
                     Console.WriteLine("Validation Rules:");
-                    while (!parser.EndOfData)
-                    {
+                    while (!parser.EndOfData) {
                         string[] fields = parser.ReadFields();
-                        if (fields[0].StartsWith("#") || fields[0].StartsWith(" "))
-                        {
+                        if (fields[0].StartsWith("#") || fields[0].StartsWith(" ")) {
                             continue;
                         }
-                        if (fields[0] == "Airline")
-                        {
+                        if (fields[0] == "Airline") {
                             hasAirline = true;
                         }
-                        if (fields[0] == "Aircraft")
-                        {
+                        if (fields[0] == "Aircraft") {
                             hasAircraft = true;
                         }
-                        if (fields[0] == "AircraftType")
-                        {
+                        if (fields[0] == "AircraftType") {
                             hasAircraftType = true;
                         }
-                        if (fields[0] == "Airport")
-                        {
+                        if (fields[0] == "Airport") {
                             hasAirport = true;
                         }
+                        if (fields[0] == "Checkin") {
+                            hasCheckins = true;
+                        }
+                        if (fields[0] == "Gate") {
+                            hasGates = true;
+                        }
+                        if (fields[0] == "Stand") {
+                            hasStands = true;
+                        }
+                        if (fields[0] == "Carousel") {
+                            hasCarousels = true;
+                        }
+
                         this.ruleList.Add(new Rule(fields));
                         Console.WriteLine($"Base Data Type = {fields[0]}, XPath = {fields[1]}, Regex = {fields[2]}");
                     }
                 }
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 Console.WriteLine($"Could not read rules file ({rulesFile}). {ex.Message}");
                 Console.WriteLine("\nHit Any Key to Exit..");
                 Console.ReadKey();
@@ -234,62 +256,46 @@ namespace AMSGet
             }
         }
 
-        public async Task<XmlElement> GetXML(string queryTemplate, string token, string soapAction, string amshost, string filename)
-        {
+        public async Task<XmlElement> GetXML(string queryTemplate, string token, string soapAction, string amshost, string filename) {
 
-            try
-            {
-                if (filename != null && dataFromFile)
-                {
+            try {
+                if (filename != null && dataFromFile) {
                     XmlDocument doc = new XmlDocument();
                     doc.Load(filename);
                     return doc.DocumentElement;
                 }
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 Console.WriteLine("Unable to read data from file");
                 return null;
             }
 
             string query = queryTemplate.Replace("@token", token);
 
-            try
-            {
-                using (var client = new HttpClient())
-                {
-                    HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, amshost)
-                    {
+            try {
+                using (var client = new HttpClient()) {
+                    HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, amshost) {
                         Content = new StringContent(query, Encoding.UTF8, "text/xml")
                     };
                     requestMessage.Headers.Add("SOAPAction", soapAction);
-                    using (HttpResponseMessage response = await client.SendAsync(requestMessage))
-                    {
-                        if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.Created || response.StatusCode == HttpStatusCode.NoContent)
-                        {
+                    using (HttpResponseMessage response = await client.SendAsync(requestMessage)) {
+                        if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.Created || response.StatusCode == HttpStatusCode.NoContent) {
                             XmlDocument doc = new XmlDocument();
                             doc.LoadXml(await response.Content.ReadAsStringAsync());
                             return doc.DocumentElement;
-                        }
-                        else
-                        {
+                        } else {
                             Console.WriteLine($"XML Retrieval Error: {response.StatusCode}");
                             return null;
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 Console.WriteLine(ex.Message);
                 return null;
             }
         }
 
-        public void Check(XmlElement el, string baseElement, string identifier, BaseType type)
-        {
-            if (el == null)
-            {
+        public void Check(XmlElement el, string baseElement, string identifier, BaseType type) {
+            if (el == null) {
                 Console.WriteLine($"No elements found");
                 Console.WriteLine("\nHit Any Key to Continue..");
                 Console.ReadKey();
@@ -302,63 +308,117 @@ namespace AMSGet
 
             bool errFound = false;
 
-            foreach (XmlNode baseDataElement in baseDataElements)
-            {
+            foreach (XmlNode baseDataElement in baseDataElements) {
                 string id = baseDataElement.SelectSingleNode(identifier, nsmgr).InnerText;
 
 
                 List<string> errors = new List<string>();
-                foreach (Rule rule in ruleList)
-                {
-                    if (rule.valid && rule.type == type)
-                    {
-                        try
-                        {
+                foreach (Rule rule in ruleList) {
+                    if (rule.valid && rule.type == type) {
+                        try {
                             string text;
-                            try
-                            {
+                            try {
                                 text = baseDataElement.SelectSingleNode(rule.xpath, nsmgr).InnerText;
 
-                            }
-                            catch (Exception)
-                            {
+                            } catch (Exception) {
                                 errors.Add($"{id}:  Rule Violation ==> {rule.message}. Element Not Found");
                                 errFound = true;
                                 continue;
                             }
                             Regex rgx = new Regex(rule.regex, RegexOptions.IgnoreCase);
                             MatchCollection matches = rgx.Matches(text);
-                            if (matches.Count == 0)
-                            {
+                            if (matches.Count == 0) {
                                 errors.Add($"{id}:  Rule Violation ==> {rule.message}. Element value = {text}");
                                 errFound = true;
                             }
-                        }
-                        catch (Exception)
-                        {
+                        } catch (Exception) {
                             errors.Add($"  (Processing Error)..{rule.message}");
                             errFound = true;
                         }
                     }
                 }
-                if (errors.Count > 0)
-                {
+                if (errors.Count > 0) {
                     // Console.WriteLine($"{id}");
-                    foreach (string err in errors)
-                    {
+                    foreach (string err in errors) {
                         Console.WriteLine($"{err}");
                     }
-                }
-                else
-                {
-                    if (showAll)
-                    {
+                } else {
+                    if (showAll) {
                         Console.WriteLine($"{id}..OK");
                     }
                 }
             }
-            if (!errFound)
-            {
+            if (!errFound) {
+                Console.WriteLine("No Rule Violations Found");
+            }
+        }
+
+        public void Check(string result, BaseType type) {
+
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(result);
+            XmlElement el = doc.DocumentElement;
+
+            if (el == null) {
+                Console.WriteLine($"No elements found");
+                Console.WriteLine("\nHit Any Key to Continue..");
+                Console.ReadKey();
+                return;
+            }
+            XmlNamespaceManager nsmgr = new XmlNamespaceManager(el.OwnerDocument.NameTable);
+            nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
+
+            XmlNodeList baseDataElements = el.SelectNodes("FixedResource", nsmgr);
+
+            bool errFound = false;
+
+            int index = -1;
+            foreach (XmlNode baseDataElement in baseDataElements) {
+                index++;
+                string id;
+                try {
+                    id = baseDataElement.SelectSingleNode("./Name", nsmgr).InnerText;
+                } catch (Exception) {
+                    id = "Element - " + index;
+                }
+
+                List<string> errors = new List<string>();
+                foreach (Rule rule in ruleList) {
+                    if (rule.valid && rule.type == type) {
+                        try {
+                            string text;
+                            try {
+                                text = baseDataElement.SelectSingleNode(rule.xpath, nsmgr).InnerText;
+
+                            } catch (Exception) {
+                                errors.Add($"{id}:  Rule Violation ==> {rule.message}. Element Not Found");
+                                errFound = true;
+                                continue;
+                            }
+                            Regex rgx = new Regex(rule.regex, RegexOptions.IgnoreCase);
+                            MatchCollection matches = rgx.Matches(text);
+                            if (matches.Count == 0) {
+                                errors.Add($"{id}:  Rule Violation ==> {rule.message}. Element value = {text}");
+                                errFound = true;
+                            }
+                        } catch (Exception) {
+                            errors.Add($"  (Processing Error)..{rule.message}");
+                            errFound = true;
+                        }
+                    }
+                }
+                if (errors.Count > 0) {
+                    // Console.WriteLine($"{id}");
+                    foreach (string err in errors) {
+                        Console.WriteLine($"{err}");
+                    }
+                } else {
+                    if (showAll) {
+                        Console.WriteLine($"{id}..OK");
+                    }
+                }
+            }
+            if (!errFound) {
                 Console.WriteLine("No Rule Violations Found");
             }
         }

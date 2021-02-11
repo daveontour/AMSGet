@@ -1,30 +1,28 @@
 ﻿using System;
 
-namespace AMSGet
-{
-    public enum BaseType
-    {
+namespace AMSGet {
+    public enum BaseType {
         Towing,
         Flight,
         Airline,
         Aircraft,
         Airport,
         AircraftType,
+        Gate,
+        Checkin,
+        Stand,
+        Carousel,
         None
     }
-    public class CSVRule
-    {
+    public class CSVRule {
         public BaseType type;
         public string header;
         public string xpath;
         public bool valid = true;
 
-        public CSVRule(string[] entries)
-        {
-            try
-            {
-                switch (entries[0])
-                {
+        public CSVRule(string[] entries) {
+            try {
+                switch (entries[0]) {
                     case "Towing":
                         type = BaseType.Towing;
                         break;
@@ -41,9 +39,7 @@ namespace AMSGet
 
                 header = entries[1];
                 xpath = entries[2];
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 valid = false;
             }
         }
