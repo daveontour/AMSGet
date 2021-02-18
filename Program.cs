@@ -1,14 +1,17 @@
 ﻿using AMSUtilLib;
 using CommandLine;
 using CommandLine.Text;
+using IronPdf;
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
 using WorkBridge.Modules.AMS.AMSIntegrationAPI.Mod.Intf.DataTypes;
 using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
+using static IronPdf.PdfPrintOptions;
 
 namespace AMSGet {
     class Program {
@@ -189,6 +192,15 @@ namespace AMSGet {
 
         }
 
+        [Verb("ganttpdf", HelpText = "Save current Gannt Chart to PDF")]
+        public class GanttPDFOptions {
+
+            [Option('f', "file", Required = false, HelpText = "File to save output to.")]
+            public string FileName { get; set; }
+
+
+        }
+
 
         [Verb("config", isDefault: true, HelpText = "Show the configuration")]
         public class Options {
@@ -219,7 +231,7 @@ namespace AMSGet {
             }
 #if DEBUG
             //string[] arr = { "flight", "QR", "123", "--from", "2020/06/01", "--to", "2020/07/04", "--csv" };
-            string[] arr = { "checkbasedata" };
+            string[] arr = { "ganttpdf" };
             //string[] arr = { "stands" };
             MyMain(arr);
             Console.WriteLine("Done");
@@ -234,7 +246,7 @@ namespace AMSGet {
 
             var parser = new Parser(with => with.HelpWriter = null);
 
-            var parserResult = parser.ParseArguments<Options, CheckOptions, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, CheckInOptions, CarouselOptions, FlightOptions, FlightsOptions>(args);
+            var parserResult = parser.ParseArguments<Options, CheckOptions, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, CheckInOptions, CarouselOptions, FlightOptions, FlightsOptions, GanttPDFOptions>(args);
 
             parserResult.WithParsed<Options>(opts => ShowConfig(opts))
                .WithParsed<GatesOptions>(opts => GetGates(opts))
@@ -244,17 +256,37 @@ namespace AMSGet {
                .WithParsed<AircraftsOptions>(opts => GetAircrafts(opts))
                .WithParsed<StandOptions>(opts => GetStand(opts))
                .WithParsed<StandsOptions>(opts => GetStands(opts))
-                              .WithParsed<CheckInOptions>(opts => GetCheckins(opts))
-                                             .WithParsed<CarouselOptions>(opts => GetCarousels(opts))
+               .WithParsed<CheckInOptions>(opts => GetCheckins(opts))
+               .WithParsed<CarouselOptions>(opts => GetCarousels(opts))
                .WithParsed<FlightOptions>(opts => GetFlight(opts))
                .WithParsed<FlightsOptions>(opts => GetFlights(opts))
                .WithParsed<TowingsOptions>(opts => GetTowings(opts))
                .WithParsed<CheckOptions>(opts => CheckBaseData(opts))
+               .WithParsed<GanttPDFOptions>(opts => SaveGanttPDF(opts))
                .WithNotParsed(errs => DisplayHelp(parserResult, errs));
 
 
         }
 
+        private static void SaveGanttPDF(GanttPDFOptions opts) {
+
+
+            GanttHTML gantt = new GanttHTML();
+
+            gantt.Prepare();
+
+            string html = gantt.GetHTML();
+
+            using (StreamWriter outputFile = new StreamWriter(Path.Combine("C:/Users/dave_/Desktop/", "test.html"))) {
+                outputFile.WriteLine(html);
+            }
+
+            PdfPrintOptions popts = new PdfPrintOptions();
+            popts.PaperSize = PdfPaperSize.A3;
+            var Renderer = new IronPdf.HtmlToPdf(popts);
+            var PDF = Renderer.RenderHtmlAsPdf(html);
+            PDF.SaveAs("C:/Users/dave_/Desktop/test.pdf");
+        }
         private static void CheckBaseData(CheckOptions opts) {
             CheckAMSData check = new CheckAMSData(opts.ShowAll, opts.Delimiter, opts.RulesFile, opts.DataFromFile);
             check.Start();
