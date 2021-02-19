@@ -277,7 +277,7 @@ namespace AMSGet {
 
             string html = gantt.GetHTML();
 
-            using (StreamWriter outputFile = new StreamWriter(Path.Combine("C:/Users/dave_/Desktop/", "test.html"))) {
+            using (StreamWriter outputFile = new StreamWriter(Path.Combine("C:/Users/dave_/OneDrive/Desktop/", "test.html"))) {
                 outputFile.WriteLine(html);
             }
 
@@ -285,7 +285,7 @@ namespace AMSGet {
             popts.PaperSize = PdfPaperSize.A3;
             var Renderer = new IronPdf.HtmlToPdf(popts);
             var PDF = Renderer.RenderHtmlAsPdf(html);
-            PDF.SaveAs("C:/Users/dave_/Desktop/test.pdf");
+            PDF.SaveAs("C:/Users/dave_/OneDrive/Desktop/test.pdf");
         }
         private static void CheckBaseData(CheckOptions opts) {
             CheckAMSData check = new CheckAMSData(opts.ShowAll, opts.Delimiter, opts.RulesFile, opts.DataFromFile);
