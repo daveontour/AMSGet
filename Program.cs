@@ -200,6 +200,25 @@ namespace AMSGet {
 
 
         }
+        [Verb("standdowngrades", HelpText = "Get downgrades")]
+        public class DownGradeOptions {
+
+            [Option('f', "file", Required = false, HelpText = "File to save output to.")]
+            public string FileName { get; set; }
+            [Option(SetName = "tomorrow", Required = false, HelpText = "Retrieve flight for tomorrow")]
+            public bool Tomorrow { get; set; }
+
+            [Option(SetName = "today", Required = false, HelpText = "Retrieve flight for today")]
+            public bool Today { get; set; }
+
+            [Option(SetName = "yesterday", Required = false, HelpText = "Retrieve flight from yesterday")]
+            public bool Yesterday { get; set; }
+            [Option(SetName = "period", Required = false, HelpText = @"Start of period to retrieve flight e.g. 2020/06/15")]
+            public string From { get; set; }
+
+            [Option(SetName = "period", Required = false, HelpText = @"End of period to retrieve flight e.g. 2020/07/15")]
+            public string To { get; set; }
+        }
 
 
         [Verb("config", isDefault: true, HelpText = "Show the configuration")]
@@ -232,7 +251,7 @@ namespace AMSGet {
 #if DEBUG
             //string[] arr = { "flight", "QR", "123", "--from", "2020/06/01", "--to", "2020/07/04", "--csv" };
             string[] arr = { "ganttpdf" };
-            //string[] arr = { "stands" };
+            //string[] arr = { "standdowngrades" };
             MyMain(arr);
             Console.WriteLine("Done");
             Console.ReadKey();
@@ -246,7 +265,7 @@ namespace AMSGet {
 
             var parser = new Parser(with => with.HelpWriter = null);
 
-            var parserResult = parser.ParseArguments<Options, CheckOptions, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, CheckInOptions, CarouselOptions, FlightOptions, FlightsOptions, GanttPDFOptions>(args);
+            var parserResult = parser.ParseArguments<Options, CheckOptions, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, CheckInOptions, CarouselOptions, FlightOptions, FlightsOptions, GanttPDFOptions, DownGradeOptions>(args);
 
             parserResult.WithParsed<Options>(opts => ShowConfig(opts))
                .WithParsed<GatesOptions>(opts => GetGates(opts))
@@ -263,9 +282,36 @@ namespace AMSGet {
                .WithParsed<TowingsOptions>(opts => GetTowings(opts))
                .WithParsed<CheckOptions>(opts => CheckBaseData(opts))
                .WithParsed<GanttPDFOptions>(opts => SaveGanttPDF(opts))
+               .WithParsed<DownGradeOptions>(opts => GetDowngrades(opts))
                .WithNotParsed(errs => DisplayHelp(parserResult, errs));
 
 
+        }
+
+        private static void GetDowngrades(DownGradeOptions opts) {
+            if (!AMSTools.FileOK(opts.FileName)) {
+                return;
+            }
+
+            var t = GetFromToTime(opts.Today, opts.Yesterday, opts.Tomorrow, opts.From, opts.To);
+            if (t == null) {
+                return;
+            }
+
+            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
+
+                try {
+                    XmlElement res = client.GetStandDowngrades(Parameters.TOKEN, t.Item1, t.Item2, Parameters.APT_CODE, AirportIdentifierType.IATACode);
+
+                    //Output in XML format
+                    AMSTools.Out(AMSTools.PrintXML(res.OuterXml), opts.FileName);
+
+
+
+                } catch (Exception e) {
+                    Console.WriteLine(e.Message);
+                }
+            }
         }
 
         private static void SaveGanttPDF(GanttPDFOptions opts) {

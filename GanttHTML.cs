@@ -7,6 +7,65 @@ using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
 
 namespace AMSGet {
 
+    class DownGradeRecord {
+        private bool fullUnavailable = false;
+        private string comment;
+        private string reason;
+        private DateTime start;
+        private DateTime end;
+        private List<string> standList = new List<string>();
+        private bool valid = true;
+
+        public DownGradeRecord(XmlNode el, XmlNamespaceManager nsmgr) {
+            this.comment = GetValue(el, "./ams:Value[@propertyName='Comment']", nsmgr);
+            this.reason = GetValue(el, "./ams:Value[@propertyName='Reason']", nsmgr);
+
+            var ss = GetValue(el, "./ams:Value[@propertyName='StartTime']", nsmgr);
+            var es = GetValue(el, "./ams:Value[@propertyName='EndTime']", nsmgr);
+
+            valid = DateTime.TryParse(ss, out start) && DateTime.TryParse(es, out end);
+
+            foreach (XmlNode stand in el.SelectNodes(".//ams:Stand", nsmgr)) {
+                var s = GetValue(stand, "./ams:Value[@propertyName='Name']", nsmgr);
+                standList.Add(s);
+            }
+
+            var sa = GetValue(el, "./ams:Value[@propertyName='IsFullUnavailability']", nsmgr);
+
+            Boolean.TryParse(sa, out fullUnavailable);
+        }
+
+        public override string ToString() {
+            string stands = "";
+            foreach (string s in standList) {
+                stands += $"{s},";
+            }
+
+            string status = this.fullUnavailable ? "Full" : "Partial";
+            return $"Downgraded Stands: {stands} \"{status}\":\"{start}\":\"{end}\":\"{comment}\":\"{reason}\"";
+        }
+        public string ToStringPartial() {
+            string status = this.fullUnavailable ? "Full" : "Partial";
+            return $"Downgraded \"{status}\":\"{start}\":\"{end}\":\"{comment}\":\"{reason}\"";
+        }
+
+        public string GetValue(XmlElement el, string xpath, XmlNamespaceManager nsmgr) {
+
+            try {
+                return el.SelectSingleNode(xpath, nsmgr).InnerText;
+            } catch (Exception) {
+                return null;
+            }
+        }
+        public string GetValue(XmlNode el, string xpath, XmlNamespaceManager nsmgr) {
+
+            try {
+                return el.SelectSingleNode(xpath, nsmgr).InnerText;
+            } catch (Exception) {
+                return null;
+            }
+        }
+    }
     class StandRecord {
         public string name;
         public string id;
@@ -65,24 +124,38 @@ namespace AMSGet {
 
     class FlightRecord {
         public string airline;
+        public string flightUniqueID;
+        public string l_flightUniqueID;
         public string fltNum;
         public string type;
         public string sto;
-        public string lairline;
-        public string lfltNum;
-        public string ltype;
-        public string lsto;
+        public string l_airline;
+        public string l_fltNum;
+        public string l_type;
+        public string l_sto;
+        public string route;
+        public string l_route;
+        public string reg;
+
+        public string actype;
 
         public FlightRecord(XmlElement el, XmlNamespaceManager nsmgr) {
             this.airline = GetValue(el, "./ams:FlightId/ams:AirlineDesignator[@codeContext='IATA']", nsmgr);
             this.fltNum = GetValue(el, "./ams:FlightId/ams:FlightNumber", nsmgr);
             this.type = GetValue(el, "./ams:FlightId/ams:FlightKind", nsmgr);
             this.sto = GetValue(el, "./ams:FlightState/ams:ScheduledTime", nsmgr);
+            this.flightUniqueID = GetValue(el, "./ams:FlightState/ams:Value[@propertyName='FlightUniqueID']", nsmgr);
 
-            this.lairline = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:AirlineDesignator[@codeContext='IATA']", nsmgr);
-            this.lfltNum = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:FlightNumber", nsmgr);
-            this.ltype = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:FlightKind", nsmgr);
-            this.lsto = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:Value[@propertyName='ScheduledTime']", nsmgr);
+            this.route = GetValue(el, "./ams:FlightState/ams:Route/ams:ViaPoints/ams:RouteViaPoint[@sequenceNumber='0']/ams:AirportCode[@codeContext='IATA']", nsmgr);
+
+            this.l_airline = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:AirlineDesignator[@codeContext='IATA']", nsmgr);
+            this.l_fltNum = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:FlightNumber", nsmgr);
+            this.l_type = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:FlightKind", nsmgr);
+            this.l_sto = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:Value[@propertyName='ScheduledTime']", nsmgr);
+            this.l_flightUniqueID = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:Value[@propertyName='FlightUniqueID']", nsmgr);
+
+            this.actype = GetValue(el, "./ams:FlightState/ams:AircraftType/ams:AircraftTypeId/ams:AircraftTypeCode[@codeContext='IATA']", nsmgr);
+            this.reg = GetValue(el, "./ams:FlightState/ams:Aircraft/ams:AircraftId/ams:Registration", nsmgr);
         }
 
         public string GetValue(XmlNode el, string xpath, XmlNamespaceManager nsmgr) {
@@ -92,6 +165,46 @@ namespace AMSGet {
             } catch (Exception) {
                 return null;
             }
+        }
+
+        public bool ShowFlight() {
+            bool show = true;
+
+            if (type == "Departure") {
+                return true;
+            }
+            if (type == "Arrival") {
+                if (l_fltNum == null) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            return show;
+        }
+
+        public string ToString(Dictionary<string, FlightRecord> fltMap) {
+
+            string fltDesc = "===================";
+
+            // Departure and linked Arrival
+            if (type == "Departure" && l_fltNum != null) {
+                return $"{l_airline}{l_fltNum} / {fltMap[l_flightUniqueID].route} / {reg} / {actype} / {airline}{fltNum} / {route}";
+            }
+
+            //Departure, no arrival
+            if (type == "Departure" && l_fltNum == null) {
+                return $"{airline}{fltNum} / {route} / {reg} / {actype}>";
+            }
+
+            //Only arrivals without a departure will get through to here
+            if (type == "Arrival") {
+                return $"<{airline}{fltNum} / {route} / {reg} / {actype}";
+            }
+
+            return fltDesc;
+
         }
     }
     class GanttHTML {
@@ -107,6 +220,7 @@ namespace AMSGet {
         private Dictionary<string, StandRecord> standMap = new Dictionary<string, StandRecord>();
         private Dictionary<string, List<StandRecord>> areaMap = new Dictionary<string, List<StandRecord>>();
         private Dictionary<string, List<SlotRecord>> standSlotMap = new Dictionary<string, List<SlotRecord>>();
+        private Dictionary<string, FlightRecord> fltMap = new Dictionary<string, FlightRecord>();
 
         string css = @"    .hourIndicator {
     border-left: 1px lightslategray solid;
@@ -176,18 +290,32 @@ namespace AMSGet {
 
             using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
 
+                try {
+                    XmlElement xdowngrades = client.GetStandDowngrades(Parameters.TOKEN, DateTime.Now.AddHours(-24), DateTime.Now.AddHours(24), Parameters.APT_CODE, AirportIdentifierType.IATACode);
+                    XmlNamespaceManager nsmgr = new XmlNamespaceManager(xdowngrades.OwnerDocument.NameTable);
+                    nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
+                    foreach (XmlElement el in xdowngrades.SelectNodes("//ams:StandDowngradeState", nsmgr)) {
+                        DownGradeRecord drec = new DownGradeRecord(el, nsmgr);
+                        Console.WriteLine(drec);
+                    }
+
+                } catch (Exception e) {
+                    Console.WriteLine(e.Message);
+                }
+            }
+
+            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
+
 
                 XmlElement res = client.GetFlights(Parameters.TOKEN, DateTime.Now.AddHours(-24), DateTime.Now.AddHours(24), Parameters.APT_CODE, AirportIdentifierType.IATACode);
                 XmlNamespaceManager nsmgr = new XmlNamespaceManager(res.OwnerDocument.NameTable);
                 nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
 
-                //using (StreamWriter outputFile = new StreamWriter(Path.Combine("C:/Users/dave_/OneDrive/Desktop/", "test.xml"))) {
-                //    outputFile.WriteLine(res.OuterXml);
-                //}
-
                 foreach (XmlElement el in res.SelectNodes("//ams:Flights/ams:Flight", nsmgr)) {
                     {
                         FlightRecord flight = new FlightRecord(el, nsmgr);
+                        fltMap.Add(flight.flightUniqueID, flight);
+
                         XmlNode slots = el.SelectSingleNode("./ams:FlightState/ams:StandSlots", nsmgr);
 
                         if (slots != null) {
@@ -245,11 +373,11 @@ namespace AMSGet {
 
         public XmlElement AddGanttTable(string area) {
 
-            XmlElement table = doc.CreateElement("div");
+            XmlElement gantt = doc.CreateElement("div");
 
             XmlElement title = doc.CreateElement("h1");
             title.InnerText = area;
-            table.AppendChild(title);
+            gantt.AppendChild(title);
 
 
             // The top row showing the time markers
@@ -257,6 +385,28 @@ namespace AMSGet {
             timeRow.SetAttribute("style", "width: 100px; height: 32px; position: relative; display: flex; align-items:center; border-bottom: solid 1px gray; width:1590px");
 
             DateTime marker = zeroTime;
+
+
+            XmlElement tableDiv = doc.CreateElement("div");
+            XmlElement table = doc.CreateElement("table");
+            tableDiv.AppendChild(table);
+            XmlElement topTableRow = doc.CreateElement("tr");
+            table.AppendChild(topTableRow);
+            XmlElement cell1 = doc.CreateElement("td");
+            XmlElement cell2 = doc.CreateElement("td");
+            XmlElement cell3 = doc.CreateElement("td");
+            XmlElement cell4 = doc.CreateElement("td");
+            XmlElement cell5 = doc.CreateElement("td");
+            cell1.InnerText = "Stand";
+            cell2.InnerText = "Start";
+            cell3.InnerText = "End";
+            cell4.InnerText = "Flight Information";
+
+
+            topTableRow.AppendChild(cell1);
+            topTableRow.AppendChild(cell2);
+            topTableRow.AppendChild(cell3);
+            topTableRow.AppendChild(cell4);
 
 
             for (int i = 0; i < 24; i++) {
@@ -267,7 +417,7 @@ namespace AMSGet {
                 marker = marker.AddHours(1);
             }
 
-            table.AppendChild(timeRow);
+            gantt.AppendChild(timeRow);
 
             // The individual rows for each stand
 
@@ -285,6 +435,10 @@ namespace AMSGet {
                     if (slots != null) {
 
                         foreach (SlotRecord slot in slots) {
+
+                            if (!slot.flight.ShowFlight()) {
+                                continue;
+                            }
 
                             if (slot.slotEndDateTime < this.zeroTime || slot.slotStartDateTime > this.zeroTime.AddHours(23)) {
                                 //Outside range of Gantt
@@ -320,16 +474,39 @@ namespace AMSGet {
                             XmlElement flt = doc.CreateElement("div");
                             flt.SetAttribute("style", $"left:{left + 150}px; width:{width}px; top: 2px; height:22px;  position:absolute; border: 1px solid black; border-radius:{radius}px; font-size:12px; font-family: Verdana; padding-top:4px; padding-left:2px");
                             flt.SetAttribute("class", "downgrade");
-                            flt.InnerText = $"{f.airline}{f.lfltNum}/MEL/DOH/23:00";
+                            flt.InnerText = f.ToString(fltMap);
                             row.AppendChild(flt);
+
+                            XmlElement tableRow = doc.CreateElement("tr");
+                            tableRow.SetAttribute("style", $"font-size:18px; font-family: Verdana;");
+                            table.AppendChild(tableRow);
+                            XmlElement cell01 = doc.CreateElement("td");
+                            XmlElement cell02 = doc.CreateElement("td");
+                            XmlElement cell03 = doc.CreateElement("td");
+                            XmlElement cell04 = doc.CreateElement("td");
+                            XmlElement cell05 = doc.CreateElement("td");
+                            cell01.InnerText = stand.name;
+                            cell02.InnerText = slot.slotStartDateTime.ToString();
+                            cell03.InnerText = slot.slotEndDateTime.ToString(); ;
+                            cell04.InnerText = f.ToString(fltMap);
+
+
+                            tableRow.AppendChild(cell01);
+                            tableRow.AppendChild(cell02);
+                            tableRow.AppendChild(cell03);
+                            tableRow.AppendChild(cell04);
+
+                            table.AppendChild(tableRow);
                         }
                     }
                 }
 
-                table.AppendChild(row);
+                gantt.AppendChild(row);
             }
 
-            return table;
+            gantt.AppendChild(tableDiv);
+
+            return gantt;
         }
 
         public XmlElement AddGridRow(string title, int rowIndex) {
