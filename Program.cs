@@ -323,15 +323,21 @@ namespace AMSGet {
 
             string html = gantt.GetHTML();
 
-            using (StreamWriter outputFile = new StreamWriter(Path.Combine("C:/Users/dave_/OneDrive/Desktop/", "test.html"))) {
+            using (StreamWriter outputFile = new StreamWriter(Path.Combine("C:/Users/dave_/Desktop/", "test.html"))) {
                 outputFile.WriteLine(html);
             }
 
             PdfPrintOptions popts = new PdfPrintOptions();
             popts.PaperSize = PdfPaperSize.A3;
+            popts.PaperOrientation = PdfPaperOrientation.Landscape;
             var Renderer = new IronPdf.HtmlToPdf(popts);
+            Renderer.PrintOptions.Footer.DrawDividerLine = true;
+            Renderer.PrintOptions.Footer.FontFamily = "Arial";
+            Renderer.PrintOptions.Footer.FontSize = 10;
+            Renderer.PrintOptions.Footer.LeftText = "{date} {time}";
+            Renderer.PrintOptions.Footer.RightText = "{page} of {total-pages}";
             var PDF = Renderer.RenderHtmlAsPdf(html);
-            PDF.SaveAs("C:/Users/dave_/OneDrive/Desktop/test.pdf");
+            PDF.SaveAs("C:/Users/dave_/Desktop/test.pdf");
         }
         private static void CheckBaseData(CheckOptions opts) {
             CheckAMSData check = new CheckAMSData(opts.ShowAll, opts.Delimiter, opts.RulesFile, opts.DataFromFile);

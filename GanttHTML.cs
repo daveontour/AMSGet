@@ -8,7 +8,7 @@ using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
 namespace AMSGet {
 
     class DownGradeRecord {
-        private bool fullUnavailable = false;
+        public bool fullUnavailable = false;
         private string comment;
         private string reason;
         public DateTime start;
@@ -71,7 +71,9 @@ namespace AMSGet {
         public string id;
         public string area;
         public int sortOrder;
+        public int numRows = 1;
         public List<DownGradeRecord> downgradeList = new List<DownGradeRecord>();
+        public List<SlotRecord> slotList = new List<SlotRecord>();
 
         public StandRecord(XmlNode stand) {
             this.name = stand.SelectSingleNode("./Name").InnerText;
@@ -79,6 +81,7 @@ namespace AMSGet {
             this.area = stand.SelectSingleNode("./Area").InnerText;
             this.sortOrder = int.Parse(stand.SelectSingleNode("./SortOrder").InnerText);
         }
+        public StandRecord() { }
     }
 
     class SlotRecord {
@@ -88,6 +91,10 @@ namespace AMSGet {
         public DateTime slotEndDateTime;
         public string slotStand;
         public FlightRecord flight;
+        public int left;
+        public int width;
+        public int row;
+        internal bool onDowngrade = false;
 
         public SlotRecord(XmlNode slot, XmlNamespaceManager nsmgr, FlightRecord flight) {
 
@@ -220,41 +227,39 @@ namespace AMSGet {
         private XmlDocument standsDoc;
         private Dictionary<string, StandRecord> standMap = new Dictionary<string, StandRecord>();
         private Dictionary<string, List<StandRecord>> areaMap = new Dictionary<string, List<StandRecord>>();
-        private Dictionary<string, List<SlotRecord>> standSlotMap = new Dictionary<string, List<SlotRecord>>();
+        //private Dictionary<string, List<SlotRecord>> standSlotMap = new Dictionary<string, List<SlotRecord>>();
         private Dictionary<string, FlightRecord> fltMap = new Dictionary<string, FlightRecord>();
 
-        string css = @"    .hourIndicator {
-    border-left: 1px lightslategray solid;
-    position: absolute;
-    top: 0px;
-    height:100%;
+        string css;
+        int minSeparation = 400;
 
-}
-
-.odd {
-   background: lightgray;
-}
-
-.even {
-  background: silver;
-}
-
-.downgrade {
-  background: yellow;
-  color: black;
-}
-.flight {
-  background: green;
-  color: white;
-}
-";
         public GanttHTML() {
+
+            StandRecord unallocated = new StandRecord();
+            unallocated.name = "Un Allocated";
+            unallocated.sortOrder = Int32.MaxValue - 1;
+
+            List<StandRecord> u = new List<StandRecord>();
+            u.Add(unallocated);
+            //           areaMap.Add("Un Allocated", u);
+
+            StandRecord noSlot = new StandRecord();
+            noSlot.name = "No Slot";
+            noSlot.sortOrder = Int32.MaxValue;
+
+            List<StandRecord> s = new List<StandRecord>();
+            s.Add(unallocated);
+            //          areaMap.Add("No Slot", s);
+
+            standMap.Add(unallocated.name, unallocated);
+            standMap.Add(noSlot.name, noSlot);
 
             root = doc.CreateElement("hmtl");
             doc.AppendChild(root);
             this.head = doc.CreateElement("head");
             this.body = doc.CreateElement("body");
             this.style = doc.CreateElement("style");
+            css = System.IO.File.ReadAllText(@"GanttStyle.css");
             style.InnerText = this.css;
 
 
@@ -273,11 +278,8 @@ namespace AMSGet {
             root.AppendChild(body);
 
             try {
-                string uri = Parameters.AMS_REST_SERVICE_URI + $"{Parameters.APT_CODE}/Stands";
-                string result = AMSTools.GetRestURI(uri).Result;
-                Console.WriteLine("STATNDS RECEIVED OK");
+                string result = AMSTools.GetRestURI(Parameters.AMS_REST_SERVICE_URI + $"{Parameters.APT_CODE}/Stands").Result;
                 standsDoc = new XmlDocument();
-                Console.WriteLine("STATNDS DOC CREATED OK");
                 standsDoc.LoadXml(result);
             } catch (Exception e) {
                 Console.WriteLine(e.Message);
@@ -301,7 +303,6 @@ namespace AMSGet {
                     nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
                     foreach (XmlElement el in xdowngrades.SelectNodes("//ams:StandDowngradeState", nsmgr)) {
                         DownGradeRecord drec = new DownGradeRecord(el, nsmgr);
-                        Console.WriteLine(drec);
                         foreach (string standID in drec.standList) {
                             standMap[standID].downgradeList.Add(drec);
                         }
@@ -335,31 +336,128 @@ namespace AMSGet {
 
                                 if (slotRecord.slotStand == null) {
                                     slotRecord.slotStand = "Un Allocated";
+                                    standMap[slotRecord.slotStand].slotList.Add(slotRecord);
+                                    continue;
                                 }
 
-                                if (!standSlotMap.ContainsKey(slotRecord.slotStand)) {
-                                    standSlotMap.Add(slotRecord.slotStand, new List<SlotRecord>());
+                                if (!slotRecord.flight.ShowFlight()) {
+                                    continue;
                                 }
 
-                                standSlotMap[slotRecord.slotStand].Add(slotRecord);
+                                if (slotRecord.slotEndDateTime < this.zeroTime || slotRecord.slotStartDateTime > this.zeroTime.AddHours(23)) {
+                                    //Outside range of Gantt
+                                    continue;
+                                }
+
+
+                                TimeSpan tss = slotRecord.slotStartDateTime - this.zeroTime;
+                                TimeSpan tse = slotRecord.slotEndDateTime - this.zeroTime;
+
+                                // End of slot before start of zeroTime 
+                                if (tse.TotalMinutes < 0) {
+                                    continue;
+                                }
+
+                                // Start of slot more than end of chart
+                                if (tss.TotalHours > 23) {
+                                    continue;
+                                }
+
+                                int width = Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes);
+                                int left = Convert.ToInt32(tss.TotalMinutes);
+                                if (left < 0) {
+                                    width += left;
+                                    left = 0;
+                                }
+
+                                slotRecord.left = left;
+                                slotRecord.width = width;
+                                slotRecord.row = 1;
+
+                                standMap[slotRecord.slotStand].slotList.Add(slotRecord);
 
                             }
                         } else {
 
                             // No Stand Slot Defined for the flight
-
-                            if (!standSlotMap.ContainsKey("No Slot")) {
-                                standSlotMap.Add("No Slot", new List<SlotRecord>());
-                            }
                             SlotRecord slotRecord = new SlotRecord(null, nsmgr, flight);
-                            standSlotMap["No Slot"].Add(slotRecord);
+                            standMap["No Slot"].slotList.Add(slotRecord);
 
                         }
                     }
                 }
             }
 
+            DeconflictSlotOverlay();
+
             return true;
+        }
+
+        private void DeconflictSlotOverlay() {
+            // Go through the slots for each stand and make sure they dont overlay each other 
+            // By moving them to the next row if necessary.
+            foreach (var pair in this.standMap) {
+                StandRecord stand = pair.Value;
+
+                // if only 0 or 1 slot, then there is no overlap, so continue;
+                if (stand.slotList.Count <= 1) {
+                    continue;
+                }
+
+                //Sort from lowest to highest. 
+                stand.slotList.Sort((p, q) => p.left.CompareTo(q.left));
+
+                List<SlotRecord> placedSlots = new List<SlotRecord>();
+
+                foreach (SlotRecord slotRec in stand.slotList) {
+                    if (placedSlots.Count == 0) {
+                        placedSlots.Add(slotRec);
+                        slotRec.row = 1;
+                        continue;
+                    }
+
+                    slotRec.row = Int16.MaxValue;
+                    foreach (SlotRecord slotTest in placedSlots) {
+                        int minLeft = Math.Max(slotTest.left + 5 + minSeparation, slotTest.left + slotTest.width);
+                        if (slotRec.left > minLeft) {
+                            slotRec.row = Math.Min(slotTest.row, slotRec.row);
+                        } else {
+                            if (slotRec.row == slotTest.row) {
+                                slotRec.row++;
+                            }
+                        }
+                    }
+
+                    if (slotRec.row == Int16.MaxValue) {
+                        stand.numRows++;
+                        slotRec.row = stand.numRows;
+                    }
+
+                    placedSlots.Add(slotRec);
+                }
+
+                stand.slotList = placedSlots;
+
+            }
+
+            // Now Lets adjust for flight allocated to downgrade stands
+            foreach (var pair in this.standMap) {
+                StandRecord stand = pair.Value;
+                if (stand.downgradeList.Count == 0 || stand.slotList.Count == 0) {
+                    continue;
+                }
+
+                stand.numRows++;
+                foreach (SlotRecord slot in stand.slotList) {
+                    slot.row++;
+                    slot.onDowngrade = true;
+                }
+
+
+
+            }
+
+            return;
         }
 
         public string GetValue(XmlElement el, string xpath, XmlNamespaceManager nsmgr) {
@@ -433,7 +531,7 @@ namespace AMSGet {
             areaMap[area].Sort((x, y) => x.sortOrder.CompareTo(y.sortOrder));
             foreach (var stand in areaMap[area]) {
                 j++;
-                XmlElement row = AddGridRow(stand.name, j);
+                XmlElement row = AddGridRow(stand, j);
 
                 foreach (DownGradeRecord dg in stand.downgradeList) {
                     if (dg.end < this.zeroTime || dg.start > this.zeroTime.AddHours(23) || !dg.valid) {
@@ -453,86 +551,59 @@ namespace AMSGet {
                     width = Math.Min(Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes), 1440);
 
                     XmlElement dgDiv = doc.CreateElement("div");
-                    dgDiv.SetAttribute("style", $"left:{left + 150}px; width:{width}px; top: 0px; height:26px; position:absolute; border: 1px solid black;  font-size:12px; font-family: Verdana;  padding-left:2px");
-                    dgDiv.SetAttribute("class", "downgrade");
+                    dgDiv.SetAttribute("style", $"left:{left + 150}px; width:{width}px; top: 2px; height:{stand.numRows * 32 - 4}px; position:absolute; border: 1px solid black;  font-size:12px; font-family: Verdana;  padding-left:2px");
+
+                    if (dg.fullUnavailable) {
+                        dgDiv.SetAttribute("class", "downgradeFull");
+                    } else {
+                        dgDiv.SetAttribute("class", "downgradePartial");
+                    }
                     dgDiv.InnerText = dg.ToStringPartial();
                     row.AppendChild(dgDiv);
                 }
 
-                // The slots for the current stand
-                if (standSlotMap.ContainsKey(stand.name)) {
+                foreach (SlotRecord slot in stand.slotList) {
 
-                    List<SlotRecord> slots = standSlotMap[stand.name];
-
-                    if (slots != null) {
-
-                        foreach (SlotRecord slot in slots) {
-
-                            if (!slot.flight.ShowFlight()) {
-                                continue;
-                            }
-
-                            if (slot.slotEndDateTime < this.zeroTime || slot.slotStartDateTime > this.zeroTime.AddHours(23)) {
-                                //Outside range of Gantt
-                                continue;
-                            }
-
-
-                            TimeSpan tss = slot.slotStartDateTime - this.zeroTime;
-                            TimeSpan tse = slot.slotEndDateTime - this.zeroTime;
-
-                            // End of slot before start of zeroTime 
-                            if (tse.TotalMinutes < 0) {
-                                continue;
-                            }
-
-                            // Start of slot more than end of chart
-                            if (tss.TotalHours > 23) {
-                                continue;
-                            }
-
-                            int radius = 7;
-                            int width = Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes);
-                            int left = Convert.ToInt32(tss.TotalMinutes);
-                            if (left < 0) {
-                                width += left;
-                                left = 0;
-                                radius = 0;
-                            }
-
-
-                            FlightRecord f = slot.flight;
-                            // Create and Add the flight indicator if in Range
-                            XmlElement flt = doc.CreateElement("div");
-                            flt.SetAttribute("style", $"left:{left + 150}px; width:{width}px; top: 2px; height:22px;  position:absolute; border: 1px solid black; border-radius:{radius}px; font-size:12px; font-family: Verdana; padding-top:4px; padding-left:2px");
-                            flt.SetAttribute("class", "flight");
-                            flt.InnerText = f.ToString(fltMap);
-                            row.AppendChild(flt);
-
-                            XmlElement tableRow = doc.CreateElement("tr");
-                            tableRow.SetAttribute("style", $"font-size:18px; font-family: Verdana;");
-                            table.AppendChild(tableRow);
-                            XmlElement cell01 = doc.CreateElement("td");
-                            XmlElement cell02 = doc.CreateElement("td");
-                            XmlElement cell03 = doc.CreateElement("td");
-                            XmlElement cell04 = doc.CreateElement("td");
-                            XmlElement cell05 = doc.CreateElement("td");
-                            cell01.InnerText = stand.name;
-                            cell02.InnerText = slot.slotStartDateTime.ToString();
-                            cell03.InnerText = slot.slotEndDateTime.ToString(); ;
-                            cell04.InnerText = f.ToString(fltMap);
-
-
-                            tableRow.AppendChild(cell01);
-                            tableRow.AppendChild(cell02);
-                            tableRow.AppendChild(cell03);
-                            tableRow.AppendChild(cell04);
-
-                            table.AppendChild(tableRow);
-                        }
+                    int radius = 7;
+                    if (slot.left == 0) {
+                        radius = 0;
                     }
-                }
 
+                    FlightRecord f = slot.flight;
+                    // Create and Add the flight indicator if in Range
+                    XmlElement flt = doc.CreateElement("div");
+                    int top = 2 + (slot.row - 1) * 32;
+                    flt.SetAttribute("style", $"left:{slot.left + 150}px; top:{top}px; width:{slot.width}px; border-radius:{radius}px; ");
+                    if (slot.onDowngrade) {
+                        flt.SetAttribute("class", "ondowngradeflight");
+                    } else {
+                        flt.SetAttribute("class", "flight");
+                    }
+
+                    flt.InnerText = f.ToString(fltMap);
+                    row.AppendChild(flt);
+
+                    XmlElement tableRow = doc.CreateElement("tr");
+                    tableRow.SetAttribute("style", $"font-size:18px; font-family: Verdana;");
+                    table.AppendChild(tableRow);
+                    XmlElement cell01 = doc.CreateElement("td");
+                    XmlElement cell02 = doc.CreateElement("td");
+                    XmlElement cell03 = doc.CreateElement("td");
+                    XmlElement cell04 = doc.CreateElement("td");
+                    XmlElement cell05 = doc.CreateElement("td");
+                    cell01.InnerText = stand.name;
+                    cell02.InnerText = slot.slotStartDateTime.ToString();
+                    cell03.InnerText = slot.slotEndDateTime.ToString(); ;
+                    cell04.InnerText = f.ToString(fltMap);
+
+
+                    tableRow.AppendChild(cell01);
+                    tableRow.AppendChild(cell02);
+                    tableRow.AppendChild(cell03);
+                    tableRow.AppendChild(cell04);
+
+                    table.AppendChild(tableRow);
+                }
                 gantt.AppendChild(row);
             }
 
@@ -541,17 +612,19 @@ namespace AMSGet {
             return gantt;
         }
 
-        public XmlElement AddGridRow(string title, int rowIndex) {
+        public XmlElement AddGridRow(StandRecord stand, int rowIndex) {
 
             XmlElement row = doc.CreateElement("div");
-            row.SetAttribute("style", "width: 100px; height: 32px; position: relative; display: flex; align-items:center; border-bottom: solid 1px gray; width:1590px");
+
+            int rowHeight = 32 * stand.numRows;
+            row.SetAttribute("style", $"width: 100px; height: {rowHeight}px; position: relative; display: flex; align-items:center; border-bottom: solid 1px gray; width:1590px");
             if (rowIndex % 2 == 0) {
                 row.SetAttribute("class", "odd");
             } else {
                 row.SetAttribute("class", "even");
             }
             XmlElement titleCell = doc.CreateElement("div");
-            titleCell.InnerText = title;
+            titleCell.InnerText = stand.name;
             titleCell.SetAttribute("style", $"left:0px; width:150px");
 
 

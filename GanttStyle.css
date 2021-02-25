@@ -1,0 +1,58 @@
+﻿.hourIndicator {
+    border-left: 1px lightslategray solid;
+    position: absolute;
+    top: 0px;
+    height: 100%;
+}
+
+.odd {
+    background: lightgray;
+}
+
+.even {
+    background: silver;
+}
+
+.downgradePartial {
+    background: gray;
+    color: black;
+    padding-top: 4px;
+    padding-left: 2px;
+    white-space: nowrap;
+}
+
+.downgradeFull {
+    background: yellow;
+    color: black;
+    padding-top: 4px;
+    padding-left: 2px;
+    white-space: nowrap;
+}
+
+.flight {
+    background: #00FF00;
+    color: black;
+    top: 2px;
+    height: 22px;
+    position: absolute;
+    border: 1px solid black;
+    font-size: 12px;
+    font-family: Verdana;
+    padding-top: 4px;
+    padding-left: 2px;
+    white-space: nowrap;
+}
+
+.ondowngradeflight {
+    background: #81DAF5;
+    color: black;
+    top: 2px;
+    height: 22px;
+    position: absolute;
+    border: 1px solid black;
+    font-size: 12px;
+    font-family: Verdana;
+    padding-top: 4px;
+    padding-left: 2px;
+    white-space: nowrap;
+}
