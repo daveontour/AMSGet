@@ -70,6 +70,16 @@
     white-space: nowrap;
 }
 
+.setTitle {
+    font-family: Verdana;
+    font-size: 18pt;
+}
+
+.areaTitle {
+    font-family: Verdana;
+    font-size: 14pt;
+}
+
 .toTimeDiv {
     color: black;
     top: 30px;

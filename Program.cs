@@ -192,11 +192,17 @@ namespace AMSGet {
 
         }
 
-        [Verb("ganttpdf", HelpText = "Save current Gannt Chart to PDF")]
-        public class GanttPDFOptions {
+        [Verb("gantt", HelpText = "Save current Gannt Chart to HTML or PDF")]
+        public class GanttOptions {
 
-            [Option('f', "file", Required = false, HelpText = "File to save output to.")]
-            public string FileName { get; set; }
+            [Option('h', "html", Required = false, HelpText = "HTML file to save output to")]
+            public string HTML { get; set; }
+
+            [Option('p', "pdf", Required = false, HelpText = "PDF file to save output to")]
+            public string PDF { get; set; }
+
+            [Option('a', "sets", Required = true, HelpText = "The Area Sets to output")]
+            public IEnumerable<string> Sets { get; set; }
 
 
         }
@@ -249,12 +255,12 @@ namespace AMSGet {
                 Console.WriteLine(ex.Message);
             }
 #if DEBUG
+            // string[] arr = { "flight", "QR", "8961", "--tomorrow" };
             //string[] arr = { "flight", "QR", "517", "--from", "2021/02/28", "--to", "2021/03/01" };
-            string[] arr = { "ganttpdf" };
+            string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--sets", "HIA", "Unallocated", "Contingency" };
             //string[] arr = { "towings", "--from", "2021/02/21", "--to", "2021/03/01" };
             MyMain(arr);
-            Console.WriteLine("Done");
-            Console.ReadKey();
+            Console.ReadLine();
 #else
             MyMain(args);
 #endif
@@ -265,7 +271,7 @@ namespace AMSGet {
 
             var parser = new Parser(with => with.HelpWriter = null);
 
-            var parserResult = parser.ParseArguments<Options, CheckOptions, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, CheckInOptions, CarouselOptions, FlightOptions, FlightsOptions, GanttPDFOptions, DownGradeOptions>(args);
+            var parserResult = parser.ParseArguments<Options, CheckOptions, AirportsOptions, TowingsOptions, AircraftTypesOptions, AirlinesOptions, AircraftsOptions, GatesOptions, StandOptions, StandsOptions, CheckInOptions, CarouselOptions, FlightOptions, FlightsOptions, GanttOptions, DownGradeOptions>(args);
 
             parserResult.WithParsed<Options>(opts => ShowConfig(opts))
                .WithParsed<GatesOptions>(opts => GetGates(opts))
@@ -281,7 +287,7 @@ namespace AMSGet {
                .WithParsed<FlightsOptions>(opts => GetFlights(opts))
                .WithParsed<TowingsOptions>(opts => GetTowings(opts))
                .WithParsed<CheckOptions>(opts => CheckBaseData(opts))
-               .WithParsed<GanttPDFOptions>(opts => SaveGanttPDF(opts))
+               .WithParsed<GanttOptions>(opts => SaveGantt(opts))
                .WithParsed<DownGradeOptions>(opts => GetDowngrades(opts))
                .WithNotParsed(errs => DisplayHelp(parserResult, errs));
 
@@ -314,30 +320,44 @@ namespace AMSGet {
             }
         }
 
-        private static void SaveGanttPDF(GanttPDFOptions opts) {
+        private static void SaveGantt(GanttOptions opts) {
 
+            if (opts.PDF == null && opts.HTML == null) {
+                Console.WriteLine("No output format selected");
+                return;
+            }
+            if (opts.Sets == null || opts.Sets.Count() == 0) {
+                Console.WriteLine("No area sets selected");
+                return;
+            }
 
-            GanttHTML gantt = new GanttHTML();
+            GanttHTML gantt = new GanttHTML(opts.Sets);
 
             gantt.Prepare();
 
             string html = gantt.GetHTML();
 
-            using (StreamWriter outputFile = new StreamWriter(Path.Combine("C:/Users/dave_/Desktop/", "test.html"))) {
-                outputFile.WriteLine(html);
+            if (opts.HTML != null) {
+                using (StreamWriter outputFile = new StreamWriter(opts.HTML)) {
+                    outputFile.WriteLine(html);
+                }
+                Console.WriteLine($"HTML output written to {opts.HTML}");
             }
 
-            PdfPrintOptions popts = new PdfPrintOptions();
-            popts.PaperSize = PdfPaperSize.A3;
-            popts.PaperOrientation = PdfPaperOrientation.Landscape;
-            var Renderer = new IronPdf.HtmlToPdf(popts);
-            Renderer.PrintOptions.Footer.DrawDividerLine = true;
-            Renderer.PrintOptions.Footer.FontFamily = "Arial";
-            Renderer.PrintOptions.Footer.FontSize = 10;
-            Renderer.PrintOptions.Footer.LeftText = "{date} {time}";
-            Renderer.PrintOptions.Footer.RightText = "{page} of {total-pages}";
-            var PDF = Renderer.RenderHtmlAsPdf(html);
-            PDF.SaveAs("C:/Users/dave_/Desktop/test.pdf");
+            if (opts.PDF != null) {
+                PdfPrintOptions popts = new PdfPrintOptions();
+                popts.PaperSize = PdfPaperSize.A3;
+                popts.PaperOrientation = PdfPaperOrientation.Landscape;
+                var Renderer = new IronPdf.HtmlToPdf(popts);
+                Renderer.PrintOptions.Footer.DrawDividerLine = true;
+                Renderer.PrintOptions.Footer.FontFamily = "Arial";
+                Renderer.PrintOptions.Footer.FontSize = 10;
+                Renderer.PrintOptions.Footer.LeftText = "{date} {time}";
+                Renderer.PrintOptions.Footer.RightText = "{page} of {total-pages}";
+                var PDF = Renderer.RenderHtmlAsPdf(html);
+                PDF.SaveAs(opts.PDF);
+                Console.WriteLine($"PDF output written to {opts.PDF}");
+            }
         }
         private static void CheckBaseData(CheckOptions opts) {
             CheckAMSData check = new CheckAMSData(opts.ShowAll, opts.Delimiter, opts.RulesFile, opts.DataFromFile);

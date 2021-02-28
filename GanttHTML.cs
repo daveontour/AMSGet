@@ -382,27 +382,27 @@ namespace AMSGet {
         private Dictionary<string, List<StandRecord>> areaMap = new Dictionary<string, List<StandRecord>>();
         //private Dictionary<string, List<SlotRecord>> standSlotMap = new Dictionary<string, List<SlotRecord>>();
         private Dictionary<string, FlightRecord> fltMap = new Dictionary<string, FlightRecord>();
+        IEnumerable<string> sets;
 
         public string css;
         public int minSeparation = 400;
 
-        public GanttHTML() {
+        public GanttHTML(IEnumerable<string> sets) {
+
+            this.sets = sets;
 
             StandRecord unallocated = new StandRecord();
-            unallocated.name = "Un Allocated";
+            unallocated.name = "Unallocated";
             unallocated.sortOrder = Int32.MaxValue - 1;
-
-            List<StandRecord> u = new List<StandRecord>();
-            u.Add(unallocated);
-            //           areaMap.Add("Un Allocated", u);
 
             StandRecord noSlot = new StandRecord();
             noSlot.name = "No Slot";
             noSlot.sortOrder = Int32.MaxValue;
 
-            List<StandRecord> s = new List<StandRecord>();
-            s.Add(unallocated);
-            //          areaMap.Add("No Slot", s);
+            List<StandRecord> u = new List<StandRecord>();
+            u.Add(unallocated);
+            u.Add(noSlot);
+            areaMap.Add("Unallocated", u);
 
             standMap.Add(unallocated.name, unallocated);
             standMap.Add(noSlot.name, noSlot);
@@ -500,7 +500,7 @@ namespace AMSGet {
                                 SlotRecord slotRecord = new SlotRecord(slot, nsmgr, flight);
 
                                 if (slotRecord.slotStand == null) {
-                                    slotRecord.slotStand = "Un Allocated";
+                                    slotRecord.slotStand = "Unallocated";
                                     standMap[slotRecord.slotStand].slotList.Add(slotRecord);
                                     continue;
                                 }
@@ -546,7 +546,7 @@ namespace AMSGet {
 
                             // No Stand Slot Defined for the flight
                             SlotRecord slotRecord = new SlotRecord(null, nsmgr, flight);
-                            standMap["No Slot"].slotList.Add(slotRecord);
+                            standMap["Unallocated"].slotList.Add(slotRecord);
 
                         }
                     }
@@ -590,9 +590,6 @@ namespace AMSGet {
 
             return true;
         }
-
-
-
         private void DeconflictSlotOverlay() {
             // Go through the slots for each stand and make sure they dont overlay each other 
             // By moving them to the next row if necessary.
@@ -633,6 +630,10 @@ namespace AMSGet {
                             break;
                         }
                         if (slot.slotEndDateTime >= down.start && slot.slotEndDateTime <= down.end) {
+                            slot.onDowngrade = true;
+                            break;
+                        }
+                        if (slot.slotEndDateTime >= down.end && slot.slotStartDateTime <= down.start) {
                             slot.onDowngrade = true;
                             break;
                         }
@@ -685,6 +686,8 @@ namespace AMSGet {
 
             XmlElement title = doc.CreateElement("h1");
             title.InnerText = area;
+            title.SetAttribute("class", "areaTitle");
+
             gantt.AppendChild(title);
 
 
@@ -913,11 +916,30 @@ namespace AMSGet {
             XmlElement setsDiv = doc.CreateElement("div");
 
             foreach (var setPair in setsMap) {
+
+                bool process = false;
+                foreach (string set in this.sets) {
+                    if (set == setPair.Key) {
+                        process = true;
+                        break;
+                    }
+                }
+
+                if (!process) {
+                    break;
+                }
+
                 XmlElement setDiv = doc.CreateElement("div");
 
+                XmlElement setHeadTitle = doc.CreateElement("h1");
+                setHeadTitle.InnerText = setPair.Key;
+                setHeadTitle.SetAttribute("class", "setTitle");
+                setDiv.AppendChild(setHeadTitle);
+
                 foreach (string area in setPair.Value) {
-                    setsDiv.AppendChild(AddGanttTable(area));
+                    setDiv.AppendChild(AddGanttTable(area));
                 }
+
                 setsDiv.AppendChild(setDiv);
             }
 
