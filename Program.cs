@@ -249,9 +249,9 @@ namespace AMSGet {
                 Console.WriteLine(ex.Message);
             }
 #if DEBUG
-            //string[] arr = { "flight", "QR", "123", "--from", "2020/06/01", "--to", "2020/07/04", "--csv" };
+            //string[] arr = { "flight", "QR", "517", "--from", "2021/02/28", "--to", "2021/03/01" };
             string[] arr = { "ganttpdf" };
-            //string[] arr = { "standdowngrades" };
+            //string[] arr = { "towings", "--from", "2021/02/21", "--to", "2021/03/01" };
             MyMain(arr);
             Console.WriteLine("Done");
             Console.ReadKey();

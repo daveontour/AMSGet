@@ -68,6 +68,9 @@
     <Content Include="CSVFormat.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="StandSets.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
     <Content Include="GanttStyle.css">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

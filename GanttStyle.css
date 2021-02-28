@@ -19,6 +19,8 @@
     padding-top: 4px;
     padding-left: 2px;
     white-space: nowrap;
+    font-size: 9px;
+    font-style: italic;
 }
 
 .downgradeFull {
@@ -27,32 +29,61 @@
     padding-top: 4px;
     padding-left: 2px;
     white-space: nowrap;
+    font-size: 9px;
+    font-style: italic;
 }
 
 .flight {
     background: #00FF00;
     color: black;
-    top: 2px;
-    height: 22px;
+    top: 12px;
+    height: 14px;
     position: absolute;
     border: 1px solid black;
     font-size: 12px;
     font-family: Verdana;
-    padding-top: 4px;
-    padding-left: 2px;
+    padding-left: 4px;
     white-space: nowrap;
 }
 
 .ondowngradeflight {
     background: #81DAF5;
     color: black;
-    top: 2px;
-    height: 22px;
+    top: 12px;
+    height: 13px;
     position: absolute;
     border: 1px solid black;
     font-size: 12px;
     font-family: Verdana;
-    padding-top: 4px;
-    padding-left: 2px;
+    padding-left: 4px;
     white-space: nowrap;
+}
+
+.fromTimeDiv {
+    color: black;
+    top: 1px;
+    left: 1px;
+    height: 10px;
+    position: absolute;
+    font-size: 8px;
+    font-family: Verdana;
+    white-space: nowrap;
+}
+
+.toTimeDiv {
+    color: black;
+    top: 30px;
+    height: 10px;
+    position: absolute;
+    font-size: 8px;
+    font-family: Verdana;
+    white-space: nowrap;
+}
+
+.toStand {
+    border-left: 2px dotted black;
+}
+
+.fromStand {
+    border-right: 2px dotted black;
 }

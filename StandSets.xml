@@ -1,0 +1,9 @@
+﻿<StandSets>
+  <Set name="HIA">
+    <Area name ="Apron A" />
+    <Area name ="Apron B" />
+  </Set>
+  <Set name="Contingency">
+    <Area name ="Contingency" />
+  </Set>
+</StandSets>
