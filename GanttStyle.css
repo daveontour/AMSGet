@@ -46,6 +46,19 @@
     white-space: nowrap;
 }
 
+.flightUnallocated {
+    background: pink;
+    color: black;
+    top: 12px;
+    height: 14px;
+    position: absolute;
+    border: 1px solid black;
+    font-size: 12px;
+    font-family: Verdana;
+    padding-left: 4px;
+    white-space: nowrap;
+}
+
 .ondowngradeflight {
     background: #81DAF5;
     color: black;

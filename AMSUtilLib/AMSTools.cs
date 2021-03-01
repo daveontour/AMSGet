@@ -8,13 +8,10 @@ using System.Threading.Tasks;
 using System.Xml;
 using WorkBridge.Modules.AMS.AMSIntegrationAPI.Mod.Intf.DataTypes;
 
-namespace AMSUtilLib
-{
-    public class AMSTools
-    {
+namespace AMSUtilLib {
+    public class AMSTools {
 
-        public static BasicHttpBinding GetWSBinding()
-        {
+        public static BasicHttpBinding GetWSBinding() {
             BasicHttpBinding binding = new BasicHttpBinding();
 
             binding.MaxReceivedMessageSize = 200000000;
@@ -24,14 +21,12 @@ namespace AMSUtilLib
             return binding;
         }
 
-        public static EndpointAddress GetWSEndPoint()
-        {
+        public static EndpointAddress GetWSEndPoint() {
             EndpointAddress address = new EndpointAddress(Parameters.AMS_WEB_SERVICE_URI);
             return address;
         }
 
-        public static FlightId GetFlightID(bool arr, string airline, string fltnum, double offset = 0.0)
-        {
+        public static FlightId GetFlightID(bool arr, string airline, string fltnum, double offset = 0.0) {
 
 
             LookupCode apCode = new LookupCode();
@@ -55,16 +50,14 @@ namespace AMSUtilLib
             return flightID;
 
         }
-        public static string PrintXML(string xml)
-        {
+        public static string PrintXML(string xml) {
             string result = "";
 
             MemoryStream mStream = new MemoryStream();
             XmlTextWriter writer = new XmlTextWriter(mStream, Encoding.Unicode);
             XmlDocument document = new XmlDocument();
 
-            try
-            {
+            try {
                 // Load the XmlDocument with the XML.
                 document.LoadXml(xml);
 
@@ -86,9 +79,7 @@ namespace AMSUtilLib
                 string formattedXml = sReader.ReadToEnd();
 
                 result = formattedXml;
-            }
-            catch (XmlException)
-            {
+            } catch (XmlException) {
                 // Handle the exception
             }
 
@@ -98,8 +89,7 @@ namespace AMSUtilLib
             return result;
         }
 
-        public async static Task<bool> IsAMSWebServiceAvailable()
-        {
+        public async static Task<bool> IsAMSWebServiceAvailable() {
             {
                 string query = @"<soapenv:Envelope xmlns:soapenv=""http://schemas.xmlsoap.org/soap/envelope/"" xmlns:ams6=""http://www.sita.aero/ams6-xml-api-webservice"">
    <soapenv:Header/>
@@ -112,83 +102,60 @@ namespace AMSUtilLib
 
                 query = query.Replace("@token", Parameters.TOKEN);
 
-                try
-                {
-                    using (var client = new HttpClient())
-                    {
+                try {
+                    using (var client = new HttpClient()) {
 
-                        HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, Parameters.AMS_WEB_SERVICE_URI)
-                        {
+                        HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, Parameters.AMS_WEB_SERVICE_URI) {
                             Content = new StringContent(query, Encoding.UTF8, "text/xml")
                         };
                         requestMessage.Headers.Add("SOAPAction", "http://www.sita.aero/ams6-xml-api-webservice/IAMSIntegrationService/GetAvailableHomeAirportsForLogin");
-                        using (HttpResponseMessage response = await client.SendAsync(requestMessage))
-                        {
-                            if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.Created || response.StatusCode == HttpStatusCode.NoContent)
-                            {
+                        using (HttpResponseMessage response = await client.SendAsync(requestMessage)) {
+                            if (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted || response.StatusCode == HttpStatusCode.Created || response.StatusCode == HttpStatusCode.NoContent) {
                                 return true;
-                            }
-                            else
-                            {
+                            } else {
                                 Console.WriteLine($"AMS Access Problem. Retrieval Error: {response.StatusCode}");
                                 return false;
                             }
                         }
                     }
-                }
-                catch (Exception)
-                {
+                } catch (Exception) {
                     return false;
                 }
             }
         }
 
-        public static bool IsAMSRestServiceAvailable()
-        {
+        public static bool IsAMSRestServiceAvailable() {
             string res = GetRestURI(Parameters.AMS_REST_SERVICE_URI + "/GlobalVariableDefinitions").Result;
-            if (res != "ERROR")
-            {
+            if (res != "ERROR") {
                 return true;
-            }
-            else
-            {
+            } else {
                 return false;
             }
         }
 
-        public static async Task<string> GetRestURI(string uri)
-        {
+        public static async Task<string> GetRestURI(string uri) {
 
-            try
-            {
+            try {
                 HttpClient _httpClient = new HttpClient();
                 _httpClient.DefaultRequestHeaders.Add("Authorization", Parameters.TOKEN);
 
-                using (var result = await _httpClient.GetAsync(uri))
-                {
+                using (var result = await _httpClient.GetAsync(uri)) {
                     string content = await result.Content.ReadAsStringAsync();
                     return content;
                 }
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 return "ERROR";
             }
         }
 
-        public static string GetAirports()
-        {
-            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint()))
-            {
+        public static string GetAirports() {
+            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
 
-                try
-                {
+                try {
                     XmlElement res = client.GetAirports(Parameters.TOKEN);
                     return res.OuterXml;
 
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     Console.WriteLine(e.Message);
                 }
             }
@@ -196,19 +163,14 @@ namespace AMSUtilLib
             return null;
         }
 
-        public static string GetAircrafts()
-        {
-            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint()))
-            {
+        public static string GetAircrafts() {
+            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
 
-                try
-                {
+                try {
                     XmlElement res = client.GetAircrafts(Parameters.TOKEN);
                     return res.OuterXml;
 
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     Console.WriteLine(e.Message);
                 }
             }
@@ -216,19 +178,14 @@ namespace AMSUtilLib
             return null;
         }
 
-        public static string GetAircraftTypes()
-        {
-            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint()))
-            {
+        public static string GetAircraftTypes() {
+            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
 
-                try
-                {
+                try {
                     XmlElement res = client.GetAircraftTypes(Parameters.TOKEN);
                     return res.OuterXml;
 
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     Console.WriteLine(e.Message);
                 }
             }
@@ -236,26 +193,18 @@ namespace AMSUtilLib
             return null;
         }
 
-        public static string GetAirlines(bool csv = false)
-        {
-            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint()))
-            {
+        public static string GetAirlines(bool csv = false) {
+            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
 
-                try
-                {
+                try {
                     XmlElement res = client.GetAirlines(Parameters.TOKEN);
-                    if (csv)
-                    {
+                    if (csv) {
                         return ConvertToCSV(res);
-                    }
-                    else
-                    {
+                    } else {
                         return res.OuterXml;
                     }
 
-                }
-                catch (Exception e)
-                {
+                } catch (Exception e) {
                     Console.WriteLine(e.Message);
                 }
             }
@@ -263,69 +212,50 @@ namespace AMSUtilLib
             return null;
         }
 
-        private static string ConvertToCSV(XmlElement xml)
-        {
+        private static string ConvertToCSV(XmlElement xml) {
 
 
-            foreach (XmlNode node in xml.SelectNodes("//Value"))
-            {
+            foreach (XmlNode node in xml.SelectNodes("//Value")) {
 
                 String att = null;
 
-                if (node.Attributes.Count > 0)
-                {
+                if (node.Attributes.Count > 0) {
                     XmlAttribute a = node.Attributes[0];
                     att = a.Name + ":" + a.Value;
                 }
 
-                try
-                {
-                    if (node.ChildNodes[0].NodeType == XmlNodeType.Text)
-                    {
+                try {
+                    if (node.ChildNodes[0].NodeType == XmlNodeType.Text) {
                         Console.WriteLine($"{node.Name}{att}: {node.InnerText}");
                     }
-                }
-                catch (Exception) { }
+                } catch (Exception) { }
             }
 
             return null;
         }
 
-        public static void Out(string text, string fileName)
-        {
-            if (fileName == null)
-            {
+        public static void Out(string text, string fileName) {
+            if (fileName == null) {
                 Console.WriteLine(text);
-            }
-            else
-            {
-                using (StreamWriter sw = File.AppendText(fileName))
-                {
+            } else {
+                using (StreamWriter sw = File.AppendText(fileName)) {
                     sw.WriteLine(text);
                 }
             }
         }
-        public static bool FileOK(string fileName)
-        {
-            if (fileName == null)
-            {
+        public static bool FileOK(string fileName) {
+            if (fileName == null) {
                 return true;
             }
 
-            if (!File.Exists(fileName))
-            {
+            if (!File.Exists(fileName)) {
                 return true;
-            }
-            else
-            {
+            } else {
                 Console.Write($"File {fileName} exists. OK to overwrite? (Y/n)");
                 ConsoleKeyInfo key = Console.ReadKey();
-                if (key.KeyChar == 'n' || key.KeyChar == 'N')
-                {
+                if (key.KeyChar == 'n' || key.KeyChar == 'N') {
                     return false;
-                }
-                else
-                {
+                } else {
                     Console.WriteLine("");
                     File.Delete(fileName);
                     return true;
@@ -333,10 +263,8 @@ namespace AMSUtilLib
             }
         }
 
-        public static bool SaveToFile(string content, string filename, bool convertToXMLPrettyPrint = false)
-        {
-            if (convertToXMLPrettyPrint)
-            {
+        public static bool SaveToFile(string content, string filename, bool convertToXMLPrettyPrint = false) {
+            if (convertToXMLPrettyPrint) {
                 content = PrintXML(content);
             }
 

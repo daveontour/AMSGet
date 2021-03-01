@@ -1,6 +1,7 @@
 ﻿using AMSUtilLib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Xml;
 using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
@@ -294,6 +295,11 @@ namespace AMSGet {
         internal Bucket() { }
 
         public void AddToBucket(SlotRecord slot) {
+
+            if (slot.left == 0 && slot.width == 0) {
+                return;
+            }
+
             bool added = false;
             int rowIndex = 0;
             foreach (List<SlotRecord> row in bucket) {
@@ -393,19 +399,16 @@ namespace AMSGet {
 
             StandRecord unallocated = new StandRecord();
             unallocated.name = "Unallocated";
-            unallocated.sortOrder = Int32.MaxValue - 1;
+            unallocated.area = "Unallocated";
+            unallocated.id = "Unallocated";
+            unallocated.sortOrder = Int32.MaxValue;
 
-            StandRecord noSlot = new StandRecord();
-            noSlot.name = "No Slot";
-            noSlot.sortOrder = Int32.MaxValue;
+            standMap.Add(unallocated.id, unallocated);
 
             List<StandRecord> u = new List<StandRecord>();
             u.Add(unallocated);
-            u.Add(noSlot);
             areaMap.Add("Unallocated", u);
 
-            standMap.Add(unallocated.name, unallocated);
-            standMap.Add(noSlot.name, noSlot);
 
             root = doc.CreateElement("hmtl");
             doc.AppendChild(root);
@@ -446,6 +449,8 @@ namespace AMSGet {
             }
 
 
+            Console.WriteLine("Retrieving Stands");
+
             // Create the StandRecords and put them into lists according to Stand Area
             foreach (XmlNode stand in standsDoc.SelectNodes(".//FixedResource")) {
                 StandRecord standRecord = new StandRecord(stand);
@@ -457,6 +462,7 @@ namespace AMSGet {
                 areaMap[standRecord.area].Add(standRecord);
             }
 
+            Console.WriteLine("Retrieving Downgrades");
             using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
 
                 // Get the Downgrade records and add them to the appropriat stand
@@ -472,10 +478,11 @@ namespace AMSGet {
                     }
 
                 } catch (Exception e) {
-                    Console.WriteLine(e.Message);
+                    Debug.WriteLine(e.Message);
                 }
             }
 
+            Console.WriteLine("Retrieving Flights");
             using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
 
 
@@ -488,6 +495,7 @@ namespace AMSGet {
                 foreach (XmlElement el in res.SelectNodes("//ams:Flights/ams:Flight", nsmgr)) {
                     {
                         FlightRecord flight = new FlightRecord(el, nsmgr);
+
                         fltMap.Add(flight.flightUniqueID, flight);
 
                         XmlNode slots = el.SelectSingleNode("./ams:FlightState/ams:StandSlots", nsmgr);
@@ -501,8 +509,6 @@ namespace AMSGet {
 
                                 if (slotRecord.slotStand == null) {
                                     slotRecord.slotStand = "Unallocated";
-                                    standMap[slotRecord.slotStand].slotList.Add(slotRecord);
-                                    continue;
                                 }
 
                                 if (!slotRecord.flight.ShowFlight()) {
@@ -556,7 +562,7 @@ namespace AMSGet {
 
             // Get the towings
             {
-
+                Console.WriteLine("Retrieving Tow Events");
                 string start = DateTime.Now.AddHours(-24).ToString("yyyy-MM-ddTHH:mm:ss");
                 string end = DateTime.Now.AddHours(24).ToString("yyyy-MM-ddTHH:mm:ss");
 
@@ -572,17 +578,19 @@ namespace AMSGet {
                     try {
                         standMap[towRec.fromStand].fromTows.Add(towRec);
                     } catch (Exception e) {
-                        Console.WriteLine(e.Message);
+                        Debug.WriteLine(e.Message);
                     }
                     try {
                         standMap[towRec.toStand].toTows.Add(towRec);
                     } catch (Exception e) {
-                        Console.WriteLine(e.Message);
+                        Debug.WriteLine(e.Message);
                     }
                 }
 
             }
             // Position the flight vertically withing row to avoid overlays
+
+            Console.WriteLine("Arranging Layout");
             DeconflictSlotOverlay();
 
             //Add Tow Flag to slot record
@@ -598,6 +606,7 @@ namespace AMSGet {
 
                 // if only 0 or 1 slot, then there is no overlap, so continue;
                 if (stand.slotList.Count <= 1) {
+                    stand.numRows = 1;
                     continue;
                 }
 
@@ -607,7 +616,6 @@ namespace AMSGet {
                 Bucket bucket = new Bucket();
                 stand.slotList = bucket.GetSlotsList(stand);
                 stand.numRows = bucket.GetRows();
-
 
             }
 
@@ -682,13 +690,19 @@ namespace AMSGet {
         }
         public XmlElement AddGanttTable(string area) {
 
+            Console.WriteLine($"Writing output for area {area}");
             XmlElement gantt = doc.CreateElement("div");
+
+            if (!areaMap.ContainsKey(area)) {
+                return gantt;
+            }
 
             XmlElement title = doc.CreateElement("h1");
             title.InnerText = area;
             title.SetAttribute("class", "areaTitle");
 
             gantt.AppendChild(title);
+
 
 
             // The top row showing the time markers
@@ -771,6 +785,9 @@ namespace AMSGet {
 
                 foreach (SlotRecord slot in stand.slotList) {
 
+                    if (slot.left == 0 && slot.width == 0) {
+                        continue;
+                    }
 
                     row.AppendChild(CreateSlotDiv(slot, stand.downgradeList));
 
@@ -808,6 +825,11 @@ namespace AMSGet {
         }
 
         private XmlElement CreateSlotDiv(SlotRecord slot, List<DownGradeRecord> downgradeList) {
+
+            //Adjust so dont overflow end of gantt
+            if (slot.left + slot.width > 1440) {
+                slot.width = 1440 - slot.left;
+            }
 
             XmlElement outerDiv = doc.CreateElement("div");
             XmlElement fromTimeDiv = doc.CreateElement("div");
@@ -853,6 +875,9 @@ namespace AMSGet {
                 fltDiv.SetAttribute("class", clazz);
             } else {
                 string clazz = "flight";
+                if (slot.slotStand == "Unallocated") {
+                    clazz = "flightUnallocated";
+                }
                 if (slot.towToStand != null) {
                     clazz += " fromStand";
                 }
@@ -875,7 +900,7 @@ namespace AMSGet {
 
             XmlElement row = doc.CreateElement("div");
 
-            int rowHeight = 42 * stand.numRows;
+            int rowHeight = Math.Max(42, 42 * stand.numRows);
             row.SetAttribute("style", $"width: 100px; height: {rowHeight}px; position: relative; display: flex; align-items:center; border-bottom: solid 1px gray; width:1590px");
             if (rowIndex % 2 == 0) {
                 row.SetAttribute("class", "odd");
@@ -915,28 +940,20 @@ namespace AMSGet {
 
             XmlElement setsDiv = doc.CreateElement("div");
 
-            foreach (var setPair in setsMap) {
-
-                bool process = false;
-                foreach (string set in this.sets) {
-                    if (set == setPair.Key) {
-                        process = true;
-                        break;
-                    }
-                }
-
-                if (!process) {
-                    break;
-                }
-
+            foreach (string setName in this.sets) {
                 XmlElement setDiv = doc.CreateElement("div");
-
                 XmlElement setHeadTitle = doc.CreateElement("h1");
-                setHeadTitle.InnerText = setPair.Key;
+                setHeadTitle.InnerText = setName;
                 setHeadTitle.SetAttribute("class", "setTitle");
                 setDiv.AppendChild(setHeadTitle);
 
-                foreach (string area in setPair.Value) {
+                if (!setsMap.ContainsKey(setName)) {
+                    setsDiv.AppendChild(setDiv);
+                    continue;
+                }
+
+                List<string> areaList = setsMap[setName];
+                foreach (string area in areaList) {
                     setDiv.AppendChild(AddGanttTable(area));
                 }
 
@@ -945,6 +962,5 @@ namespace AMSGet {
 
             return setsDiv;
         }
-
     }
 }

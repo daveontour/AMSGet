@@ -2,6 +2,32 @@
   <Set name="HIA">
     <Area name ="Apron A" />
     <Area name ="Apron B" />
+    <Area name ="Apron C" />
+    <Area name ="Apron D" />
+    <Area name ="Apron E" />
+    <Area name ="Apron G" />
+    <Area name ="Apron H" />
+    <Area name ="Apron Q" />
+    <Area name ="Apron V" />
+    <Area name ="Apron 500" />
+    <Area name ="Apron Y" />
+    <Area name ="QR Hanger" />
+    <Area name ="Isolation Bay" />
+    <Area name ="Apron 400" />
+    <Area name ="Apron 500" />
+  </Set>
+  <Set name="DIA">
+    <Area name ="East Apron 1" />
+    <Area name ="East Apron 2" />
+    <Area name ="East Apron 3" />
+    <Area name ="West Apron" />
+    <Area name ="Emiri Hangar" />
+    <Area name ="GA Hangar" />
+    <Area name ="Hangar" />
+    <Area name ="Isolation Bay" />
+    <Area name ="Main Apron" />
+    <Area name ="Military Hangar" />
+    <Area name ="VIP Apron" />
   </Set>
   <Set name="Contingency">
     <Area name ="Contingency" />

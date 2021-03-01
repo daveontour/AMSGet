@@ -201,7 +201,7 @@ namespace AMSGet {
             [Option('p', "pdf", Required = false, HelpText = "PDF file to save output to")]
             public string PDF { get; set; }
 
-            [Option('a', "sets", Required = true, HelpText = "The Area Sets to output")]
+            [Option('s', "sets", Required = true, HelpText = "The Area Sets to output")]
             public IEnumerable<string> Sets { get; set; }
 
 
@@ -257,7 +257,7 @@ namespace AMSGet {
 #if DEBUG
             // string[] arr = { "flight", "QR", "8961", "--tomorrow" };
             //string[] arr = { "flight", "QR", "517", "--from", "2021/02/28", "--to", "2021/03/01" };
-            string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--sets", "HIA", "Unallocated", "Contingency" };
+            string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--pdf", "C:/Users/dave_/Desktop/test.pdf", "--sets", "Unallocated", "HIA", "DIA", "Contingency" };
             //string[] arr = { "towings", "--from", "2021/02/21", "--to", "2021/03/01" };
             MyMain(arr);
             Console.ReadLine();
