@@ -36,9 +36,6 @@
     <Reference Include="CommandLine, Version=2.8.0.0, Culture=neutral, PublicKeyToken=5a870481e358d379, processorArchitecture=MSIL">
       <HintPath>packages\CommandLineParser.2.8.0\lib\net45\CommandLine.dll</HintPath>
     </Reference>
-    <Reference Include="IronPdf, Version=2021.1.29.0, Culture=neutral, PublicKeyToken=94e1c31412563c75, processorArchitecture=MSIL">
-      <HintPath>packages\IronPdf.2021.1.29\lib\net45\IronPdf.dll</HintPath>
-    </Reference>
     <Reference Include="IronPdf.Assets.Rendering.Windows, Version=21.0.0.0, Culture=neutral, PublicKeyToken=94e1c31412563c75, processorArchitecture=MSIL">
       <HintPath>packages\IronPdf.Assets.Rendering.Windows.21.0.0\lib\net40\IronPdf.Assets.Rendering.Windows.dll</HintPath>
     </Reference>

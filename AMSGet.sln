@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AMSGet", "AMSGet.csproj", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AMSUtilLib", "AMSUtilLib\AMSUtilLib.csproj", "{FF1951B6-7ED1-41AA-B53E-597D3E9BFB5A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenerateGantt", "..\GenerateGantt\GenerateGantt.csproj", "{DA1388E8-6E14-4F1A-8BE6-5038C49B32EF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{FF1951B6-7ED1-41AA-B53E-597D3E9BFB5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FF1951B6-7ED1-41AA-B53E-597D3E9BFB5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FF1951B6-7ED1-41AA-B53E-597D3E9BFB5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA1388E8-6E14-4F1A-8BE6-5038C49B32EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA1388E8-6E14-4F1A-8BE6-5038C49B32EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA1388E8-6E14-4F1A-8BE6-5038C49B32EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA1388E8-6E14-4F1A-8BE6-5038C49B32EF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

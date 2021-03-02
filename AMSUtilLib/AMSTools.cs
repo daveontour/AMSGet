@@ -135,12 +135,18 @@ namespace AMSUtilLib {
             }
         }
 
-        public static async Task<string> GetRestURI(string uri) {
+        public static async Task<string> GetRestURI(string uri, bool addHeader = true, string user = null, string pass = null) {
 
             try {
                 HttpClient _httpClient = new HttpClient();
-                _httpClient.DefaultRequestHeaders.Add("Authorization", Parameters.TOKEN);
-
+                if (addHeader) {
+                    _httpClient.DefaultRequestHeaders.Add("Authorization", Parameters.TOKEN);
+                }
+                if (user != null) {
+                    var authenticationString = $"{user}:{pass}";
+                    var base64EncodedAuthenticationString = Convert.ToBase64String(System.Text.ASCIIEncoding.UTF8.GetBytes(authenticationString));
+                    _httpClient.DefaultRequestHeaders.Add("Authorization", "Basic " + base64EncodedAuthenticationString);
+                }
                 using (var result = await _httpClient.GetAsync(uri)) {
                     string content = await result.Content.ReadAsStringAsync();
                     return content;
@@ -186,12 +192,24 @@ namespace AMSUtilLib {
 
         public static XmlElement GetFlightsXML(int fromHoursOffset, int toHoursOffset) {
 
-            if (Parameters.USE_FLIGHT_QUERY_API) {
-                XmlDocument doc = new XmlDocument();
-                doc.Load("response.xml");
-                return doc.DocumentElement;
-            }
+            try {
+                if (Parameters.USE_FLIGHT_QUERY_API) {
+                    DateTime from = DateTime.Now.AddHours(fromHoursOffset);
+                    DateTime to = DateTime.Now.AddHours(fromHoursOffset);
 
+                    string uri = Parameters.FLIGHT_QUERY_API_URI;
+
+                    uri = $"{uri}{from.ToString("yyyy-MM-ddTHH:mm:ss")}/{to.ToString("yyyy-MM-ddTHH:mm:ss")}";
+                    Console.WriteLine(uri);
+                    XmlDocument doc = new XmlDocument();
+                    doc.LoadXml(GetRestURI(uri, false, Parameters.FLIGHT_QUERY_API_USER, Parameters.FLIGHT_QUERY_API_PASSWORD).Result);
+                    return doc.DocumentElement;
+                }
+            } catch (Exception ex) {
+                Console.WriteLine(ex.Message);
+                Console.WriteLine("Could not use Flight Query API, so will use AMS direct");
+                Parameters.USE_FLIGHT_QUERY_API = false;
+            }
 
             using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
                 XmlElement res = client.GetFlights(Parameters.TOKEN, DateTime.Now.AddHours(fromHoursOffset), DateTime.Now.AddHours(toHoursOffset), Parameters.APT_CODE, AirportIdentifierType.IATACode);

@@ -9,6 +9,8 @@ namespace AMSUtilLib {
         public static string AMS_WEB_SERVICE_URI;
         public static string APT_CODE;
         public static string FLIGHT_QUERY_API_URI;
+        public static string FLIGHT_QUERY_API_USER;
+        public static string FLIGHT_QUERY_API_PASSWORD;
         public static bool USE_FLIGHT_QUERY_API;
         static Parameters() {
 
@@ -21,6 +23,8 @@ namespace AMSUtilLib {
                 AMS_REST_SERVICE_URI = myDllConfigAppSettings.Settings["AMSRestServiceURI"].Value;
                 AMS_WEB_SERVICE_URI = myDllConfigAppSettings.Settings["AMSWebServiceURI"].Value;
                 FLIGHT_QUERY_API_URI = myDllConfigAppSettings.Settings["FlightQueryAPIURI"].Value;
+                FLIGHT_QUERY_API_USER = myDllConfigAppSettings.Settings["FlightQueryAPIUser"].Value;
+                FLIGHT_QUERY_API_PASSWORD = myDllConfigAppSettings.Settings["FlightQueryAPIPassword"].Value;
 
             } catch (Exception ex) {
                 Console.WriteLine(ex.Message);

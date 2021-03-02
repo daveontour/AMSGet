@@ -11,7 +11,7 @@ using System.Xml;
 using System.Xml.Linq;
 using WorkBridge.Modules.AMS.AMSIntegrationAPI.Mod.Intf.DataTypes;
 using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
-using static IronPdf.PdfPrintOptions;
+
 
 namespace AMSGet {
     class Program {
@@ -39,6 +39,9 @@ namespace AMSGet {
 
             [Option('f', "file", Required = false, HelpText = "File to save output to.")]
             public string FileName { get; set; }
+
+            [Option('s', "flightcache", Required = false, HelpText = "Use the Flight Query Cache API if available")]
+            public bool FlightCache { get; set; }
 
             [Option('c', "csv", Required = false, HelpText = "Output in CSV format.")]
             public bool CSV { get; set; }
@@ -195,11 +198,11 @@ namespace AMSGet {
         [Verb("gantt", HelpText = "Save current Gannt Chart to HTML or PDF")]
         public class GanttOptions {
 
-            [Option('h', "html", Required = false, HelpText = "HTML file to save output to")]
+            [Option('h', "html", Required = true, HelpText = "HTML file to save output to")]
             public string HTML { get; set; }
 
-            [Option('p', "pdf", Required = false, HelpText = "PDF file to save output to")]
-            public string PDF { get; set; }
+            //[Option('p', "pdf", Required = false, HelpText = "PDF file to save output to")]
+            //public string PDF { get; set; }
 
             [Option('s', "sets", Required = true, HelpText = "The Area Sets to output")]
             public IEnumerable<string> Sets { get; set; }
@@ -266,9 +269,10 @@ namespace AMSGet {
             }
 #if DEBUG
             // string[] arr = { "flight", "QR", "8961", "--tomorrow" };
+            string[] arr = { "flights", "-s" };
             //string[] arr = { "config", "--test" };
             //string[] arr = { "flight", "QR", "517", "--from", "2021/02/28", "--to", "2021/03/01" };
-            string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--pdf", "C:/Users/dave_/Desktop/test.pdf", "--sets", "Unallocated", "HIA", "DIA", "Contingency" };
+            //string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--pdf", "C:/Users/dave_/Desktop/test.pdf", "--sets", "Unallocated", "HIA", "DIA", "Contingency" };
             //string[] arr = { "towings", "--from", "2021/02/21", "--to", "2021/03/01" };
             MyMain(arr);
             Console.ReadLine();
@@ -337,10 +341,10 @@ namespace AMSGet {
 
         private static void SaveGantt(GanttOptions opts) {
 
-            if (opts.PDF == null && opts.HTML == null) {
-                Console.WriteLine("No output format selected");
-                return;
-            }
+            //if (opts.PDF == null && opts.HTML == null) {
+            //    Console.WriteLine("No output format selected");
+            //    return;
+            //}
             if (opts.Sets == null || opts.Sets.Count() == 0) {
                 Console.WriteLine("No area sets selected");
                 return;
@@ -359,20 +363,20 @@ namespace AMSGet {
                 Console.WriteLine($"HTML output written to {opts.HTML}");
             }
 
-            if (opts.PDF != null) {
-                PdfPrintOptions popts = new PdfPrintOptions();
-                popts.PaperSize = PdfPaperSize.A3;
-                popts.PaperOrientation = PdfPaperOrientation.Landscape;
-                var Renderer = new IronPdf.HtmlToPdf(popts);
-                Renderer.PrintOptions.Footer.DrawDividerLine = true;
-                Renderer.PrintOptions.Footer.FontFamily = "Arial";
-                Renderer.PrintOptions.Footer.FontSize = 10;
-                Renderer.PrintOptions.Footer.LeftText = "{date} {time}";
-                Renderer.PrintOptions.Footer.RightText = "{page} of {total-pages}";
-                var PDF = Renderer.RenderHtmlAsPdf(html);
-                PDF.SaveAs(opts.PDF);
-                Console.WriteLine($"PDF output written to {opts.PDF}");
-            }
+            //if (opts.PDF != null) {
+            //    PdfPrintOptions popts = new PdfPrintOptions();
+            //    popts.PaperSize = PdfPaperSize.A3;
+            //    popts.PaperOrientation = PdfPaperOrientation.Landscape;
+            //    var Renderer = new IronPdf.HtmlToPdf(popts);
+            //    Renderer.PrintOptions.Footer.DrawDividerLine = true;
+            //    Renderer.PrintOptions.Footer.FontFamily = "Arial";
+            //    Renderer.PrintOptions.Footer.FontSize = 10;
+            //    Renderer.PrintOptions.Footer.LeftText = "{date} {time}";
+            //    Renderer.PrintOptions.Footer.RightText = "{page} of {total-pages}";
+            //    var PDF = Renderer.RenderHtmlAsPdf(html);
+            //    PDF.SaveAs(opts.PDF);
+            //    Console.WriteLine($"PDF output written to {opts.PDF}");
+            //}
         }
         private static void CheckBaseData(CheckOptions opts) {
             CheckAMSData check = new CheckAMSData(opts.ShowAll, opts.Delimiter, opts.RulesFile, opts.DataFromFile);
@@ -512,6 +516,12 @@ namespace AMSGet {
         private static int GetFlights(FlightsOptions opts) {
             if (!AMSTools.FileOK(opts.FileName)) {
                 return -1;
+            }
+
+            if (opts.FlightCache) {
+                XmlElement res = AMSTools.GetFlightsXML(-24, 24);
+                AMSTools.Out(AMSTools.PrintXML(res.OuterXml), opts.FileName);
+                return 1;
             }
 
             var t = GetFromToTime(opts.Today, opts.Yesterday, opts.Tomorrow, opts.From, opts.To);
