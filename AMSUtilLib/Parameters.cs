@@ -1,32 +1,35 @@
 ﻿using System;
 using System.Configuration;
 
-namespace AMSUtilLib
-{
-    public class Parameters
-    {
+namespace AMSUtilLib {
+    public class Parameters {
 
         public static string TOKEN;
         public static string AMS_REST_SERVICE_URI;
         public static string AMS_WEB_SERVICE_URI;
         public static string APT_CODE;
-        static Parameters()
-        {
+        public static string FLIGHT_QUERY_API_URI;
+        public static bool USE_FLIGHT_QUERY_API;
+        static Parameters() {
 
             Configuration myDllConfig = ConfigurationManager.OpenExeConfiguration(typeof(Parameters).Assembly.Location);
             AppSettingsSection myDllConfigAppSettings = (AppSettingsSection)myDllConfig.GetSection("appSettings");
-            try
-            {
+            try {
 
                 APT_CODE = myDllConfigAppSettings.Settings["IATAAirportCode"].Value;
                 TOKEN = myDllConfigAppSettings.Settings["Token"].Value;
                 AMS_REST_SERVICE_URI = myDllConfigAppSettings.Settings["AMSRestServiceURI"].Value;
                 AMS_WEB_SERVICE_URI = myDllConfigAppSettings.Settings["AMSWebServiceURI"].Value;
+                FLIGHT_QUERY_API_URI = myDllConfigAppSettings.Settings["FlightQueryAPIURI"].Value;
 
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 Console.WriteLine(ex.Message);
+            }
+
+            try {
+                USE_FLIGHT_QUERY_API = bool.Parse(myDllConfigAppSettings.Settings["UseFlightQueryAPI"].Value);
+            } catch (Exception) {
+                USE_FLIGHT_QUERY_API = false;
             }
         }
     }

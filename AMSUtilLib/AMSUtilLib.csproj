@@ -47,11 +47,15 @@
   <ItemGroup>
     <Compile Include="AMS.cs" />
     <Compile Include="AMSTools.cs" />
+    <Compile Include="RecordTypes.cs" />
     <Compile Include="Parameters.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="AMSUtilLib.dll.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="response.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

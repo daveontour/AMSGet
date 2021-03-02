@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -7,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using WorkBridge.Modules.AMS.AMSIntegrationAPI.Mod.Intf.DataTypes;
+using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
 
 namespace AMSUtilLib {
     public class AMSTools {
@@ -145,6 +147,55 @@ namespace AMSUtilLib {
                 }
             } catch (Exception) {
                 return "ERROR";
+            }
+        }
+
+        public List<FlightRecord> GetFlightRecords(int fromHoursOffset, int toHoursOffset) {
+            var list = new List<FlightRecord>();
+            XmlElement flightsXML = GetFlightsXML(fromHoursOffset, toHoursOffset);
+
+            if (Parameters.USE_FLIGHT_QUERY_API) {
+                // Process the messages from Flight Query Cache (AIP)
+                XmlNamespaceManager nsmgr = new XmlNamespaceManager(flightsXML.OwnerDocument.NameTable);
+                nsmgr.AddNamespace("aip", "http://www.sita.aero/aip/XMLSchema");
+                nsmgr.AddNamespace("ns2", "http://www.w3.org/2001/12/soap-envelope");
+                // Create the flight records and add them to the stands. Position them horizontally.
+                foreach (XmlElement el in flightsXML.SelectNodes("//aip:FlightData", nsmgr)) {
+                    {
+                        FlightRecord flight = new FlightRecord(el, nsmgr);
+                        list.Add(flight);
+                    }
+                }
+
+            } else {
+                // Process the messages from AMS Direct (AMSx)
+
+                XmlNamespaceManager nsmgr = new XmlNamespaceManager(flightsXML.OwnerDocument.NameTable);
+                nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
+                // Create the flight records and add them to the stands. Position them horizontally.
+                foreach (XmlElement el in flightsXML.SelectNodes("//ams:Flights/ams:Flight", nsmgr)) {
+                    {
+                        FlightRecord flight = new FlightRecord(el, nsmgr);
+                        list.Add(flight);
+                    }
+                }
+            }
+
+            return list;
+        }
+
+        public static XmlElement GetFlightsXML(int fromHoursOffset, int toHoursOffset) {
+
+            if (Parameters.USE_FLIGHT_QUERY_API) {
+                XmlDocument doc = new XmlDocument();
+                doc.Load("response.xml");
+                return doc.DocumentElement;
+            }
+
+
+            using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
+                XmlElement res = client.GetFlights(Parameters.TOKEN, DateTime.Now.AddHours(fromHoursOffset), DateTime.Now.AddHours(toHoursOffset), Parameters.APT_CODE, AirportIdentifierType.IATACode);
+                return res;
             }
         }
 
