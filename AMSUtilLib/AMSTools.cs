@@ -13,6 +13,9 @@ using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
 namespace AMSUtilLib {
     public class AMSTools {
 
+        public static bool USE_FLIGHT_QUERY_API_ORIG = false;
+        private static bool AIP_FLIGHTS;
+
         public static BasicHttpBinding GetWSBinding() {
             BasicHttpBinding binding = new BasicHttpBinding();
 
@@ -160,7 +163,7 @@ namespace AMSUtilLib {
             var list = new List<FlightRecord>();
             XmlElement flightsXML = GetFlightsXML(fromHoursOffset, toHoursOffset);
 
-            if (Parameters.USE_FLIGHT_QUERY_API) {
+            if (AIP_FLIGHTS) {
                 // Process the messages from Flight Query Cache (AIP)
                 XmlNamespaceManager nsmgr = new XmlNamespaceManager(flightsXML.OwnerDocument.NameTable);
                 nsmgr.AddNamespace("aip", "http://www.sita.aero/aip/XMLSchema");
@@ -194,6 +197,7 @@ namespace AMSUtilLib {
 
             try {
                 if (Parameters.USE_FLIGHT_QUERY_API) {
+
                     DateTime from = DateTime.Now.AddHours(fromHoursOffset);
                     DateTime to = DateTime.Now.AddHours(fromHoursOffset);
 
@@ -203,12 +207,14 @@ namespace AMSUtilLib {
                     Console.WriteLine(uri);
                     XmlDocument doc = new XmlDocument();
                     doc.LoadXml(GetRestURI(uri, false, Parameters.FLIGHT_QUERY_API_USER, Parameters.FLIGHT_QUERY_API_PASSWORD).Result);
+                    AIP_FLIGHTS = true;
                     return doc.DocumentElement;
                 }
             } catch (Exception ex) {
+
                 Console.WriteLine(ex.Message);
                 Console.WriteLine("Could not use Flight Query API, so will use AMS direct");
-                Parameters.USE_FLIGHT_QUERY_API = false;
+                AIP_FLIGHTS = false;
             }
 
             using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {

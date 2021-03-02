@@ -126,9 +126,9 @@ namespace AMSGet {
 
 
 
-                XmlElement res = AMSTools.GetFlightsXML(-24, 24);
-                XmlNamespaceManager nsmgr = new XmlNamespaceManager(res.OwnerDocument.NameTable);
-                nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
+                //XmlElement res = AMSTools.GetFlightsXML(-24, 24);
+                //XmlNamespaceManager nsmgr = new XmlNamespaceManager(res.OwnerDocument.NameTable);
+                //nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
 
 
                 // Create the flight records and add them to the stands. Position them horizontally.
@@ -189,7 +189,7 @@ namespace AMSGet {
                         }
                         if (noSlots) {
                             // No Stand Slot Defined for the flight
-                            SlotRecord slotRecord = new SlotRecord(null, nsmgr, flight);
+                            SlotRecord slotRecord = new SlotRecord(null, null, flight);
                             standMap["Unallocated"].slotList.Add(slotRecord);
                         }
                     }
@@ -349,28 +349,6 @@ namespace AMSGet {
             DateTime marker = zeroTime;
 
 
-            //XmlElement tableDiv = doc.CreateElement("div");
-            //XmlElement table = doc.CreateElement("table");
-            //tableDiv.AppendChild(table);
-            //XmlElement topTableRow = doc.CreateElement("tr");
-            //table.AppendChild(topTableRow);
-            //XmlElement cell1 = doc.CreateElement("td");
-            //XmlElement cell2 = doc.CreateElement("td");
-            //XmlElement cell3 = doc.CreateElement("td");
-            //XmlElement cell4 = doc.CreateElement("td");
-            //XmlElement cell5 = doc.CreateElement("td");
-            //cell1.InnerText = "Stand";
-            //cell2.InnerText = "Start";
-            //cell3.InnerText = "End";
-            //cell4.InnerText = "Flight Information";
-
-
-            //topTableRow.AppendChild(cell1);
-            //topTableRow.AppendChild(cell2);
-            //topTableRow.AppendChild(cell3);
-            //topTableRow.AppendChild(cell4);
-
-
             for (int i = 0; i < 24; i++) {
                 XmlElement cell = doc.CreateElement("div");
                 cell.SetAttribute("style", $"left:{120 + i * 60}px; width:60px;position: absolute; text-align:center");
@@ -408,6 +386,8 @@ namespace AMSGet {
                     }
                     width = Math.Min(Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes), 1440);
 
+
+
                     XmlElement dgDiv = doc.CreateElement("div");
                     dgDiv.SetAttribute("style", $"left:{left + 150}px; width:{width}px; top: 2px; height:{32 + (stand.numRows - 1) * 42 }px; position:absolute; border: 1px solid black;  font-size:12px; font-family: Verdana;  padding-left:2px");
 
@@ -428,30 +408,6 @@ namespace AMSGet {
 
                     row.AppendChild(CreateSlotDiv(slot, stand.downgradeList));
 
-
-                    // The row for the text table
-                    //{
-                    //    XmlElement tableRow = doc.CreateElement("tr");
-                    //    tableRow.SetAttribute("style", $"font-size:18px; font-family: Verdana;");
-                    //    table.AppendChild(tableRow);
-                    //    XmlElement cell01 = doc.CreateElement("td");
-                    //    XmlElement cell02 = doc.CreateElement("td");
-                    //    XmlElement cell03 = doc.CreateElement("td");
-                    //    XmlElement cell04 = doc.CreateElement("td");
-                    //    XmlElement cell05 = doc.CreateElement("td");
-                    //    cell01.InnerText = stand.name;
-                    //    cell02.InnerText = slot.slotStartDateTime.ToString();
-                    //    cell03.InnerText = slot.slotEndDateTime.ToString(); ;
-                    //    cell04.InnerText = f.ToString(fltMap);
-
-
-                    //    tableRow.AppendChild(cell01);
-                    //    tableRow.AppendChild(cell02);
-                    //    tableRow.AppendChild(cell03);
-                    //    tableRow.AppendChild(cell04);
-
-                    //    table.AppendChild(tableRow);
-                    //}
                 }
                 gantt.AppendChild(row);
             }
@@ -574,16 +530,18 @@ namespace AMSGet {
 
         public string GetHTML() {
 
-            //foreach (var areaPair in areaMap) {
-            //    body.AppendChild(AddGanttTable(areaPair.Key));
-            //}
+            XmlElement timeDiv = doc.CreateElement("div");
+            timeDiv.InnerText = $"AMS Gantt Chart @ {DateTime.Now}";
 
+            body.AppendChild(timeDiv);
             body.AppendChild(GetSets());
+
             string html = doc.OuterXml.Replace("&amp;nbsp;", "&nbsp;");
             return html;
         }
 
         public XmlElement GetSets() {
+
 
             XmlElement setsDiv = doc.CreateElement("div");
 

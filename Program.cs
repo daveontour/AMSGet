@@ -269,10 +269,10 @@ namespace AMSGet {
             }
 #if DEBUG
             // string[] arr = { "flight", "QR", "8961", "--tomorrow" };
-            string[] arr = { "flights", "-s" };
+            //string[] arr = { "flights", "-s" };
             //string[] arr = { "config", "--test" };
             //string[] arr = { "flight", "QR", "517", "--from", "2021/02/28", "--to", "2021/03/01" };
-            //string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--pdf", "C:/Users/dave_/Desktop/test.pdf", "--sets", "Unallocated", "HIA", "DIA", "Contingency" };
+            string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--sets", "Unallocated", "HIA", "DIA", "Contingency" };
             //string[] arr = { "towings", "--from", "2021/02/21", "--to", "2021/03/01" };
             MyMain(arr);
             Console.ReadLine();
