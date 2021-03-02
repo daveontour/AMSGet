@@ -42,6 +42,33 @@ namespace AMSUtilLib {
         }
     }
 
+    public class ResourceRecord {
+        public string type;
+        public string code;
+        public string name;
+        public string additoinal;
+        public string start;
+        public string stop;
+        public DateTime startTime;
+        public DateTime stopTime;
+
+        public ResourceRecord(string type, string code, string name, string additoinal, string start, string stop) {
+            this.type = type;
+            this.code = code;
+            this.name = name;
+            this.additoinal = additoinal;
+            this.start = start;
+            this.stop = stop;
+
+            DateTime.TryParse(start, out this.startTime);
+            DateTime.TryParse(stop, out this.stopTime);
+        }
+
+        public override string ToString() {
+            return $"Type: {type}, Code: {code}, Start: {startTime}, Stop: {stopTime}";
+        }
+    }
+
     public class FlightRecord : Record {
         public string airline;
         public string flightUniqueID;
@@ -58,6 +85,8 @@ namespace AMSUtilLib {
         public string reg;
         public DateTime stoDate;
         public DateTime l_stoDate;
+
+        public List<ResourceRecord> resources = new List<ResourceRecord>();
 
 
         public string actype;
@@ -96,26 +125,49 @@ namespace AMSUtilLib {
         }
 
         private void ProcessAIP(XmlElement el, XmlNamespaceManager nsmgr) {
-            this.airline = GetValue(el, "./ams:FlightId/ams:AirlineDesignator[@codeContext='IATA']", nsmgr);
-            this.fltNum = GetValue(el, "./ams:FlightId/ams:FlightNumber", nsmgr);
-            this.type = GetValue(el, "./ams:FlightId/ams:FlightKind", nsmgr);
-            this.sto = GetValue(el, "./ams:FlightState/ams:ScheduledTime", nsmgr);
-            this.flightUniqueID = GetValue(el, "./aip:FlightID/aip", nsmgr);
+            this.airline = GetValue(el, "./aip:FlightID/aip:Airline/aip:IATA", nsmgr);
+            this.fltNum = GetValue(el, "./aip:FlightID/aip:FlightNumber", nsmgr);
+            this.type = GetValue(el, "./aip:FlightID/aip:FlightNature", nsmgr);
+            this.sto = GetValue(el, "./aip:FlightID/aip:STO/aip:Date", nsmgr) + "T" + GetValue(el, "./aip:FlightID/aip:STO/aip:Time", nsmgr);
+            this.flightUniqueID = GetValue(el, "./aip:FlightID/aip:AIPUniqueID", nsmgr);
 
             DateTime.TryParse(sto, out this.stoDate);
 
-            this.route = GetValue(el, "./ams:FlightState/ams:Route/ams:ViaPoints/ams:RouteViaPoint[@sequenceNumber='0']/ams:AirportCode[@codeContext='IATA']", nsmgr);
+            if (type == "ARRIVAL") {
+                this.route = GetValue(el, "./aip:Route/aip:Origin/aip:IATA", nsmgr);
+            } else {
+                this.route = GetValue(el, "./aip:Route/aip:Destination/aip:IATA", nsmgr);
+            }
+            this.l_airline = GetValue(el, "./aip:LinkedFlightID/aip:Airline/aip:IATA", nsmgr);
+            this.l_fltNum = GetValue(el, "./aip:LinkedFlightID/aip:FlightNumber", nsmgr);
+            this.l_type = GetValue(el, "./aip:LinkedFlightID/aip:FlightNature", nsmgr);
 
-            this.l_airline = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:AirlineDesignator[@codeContext='IATA']", nsmgr);
-            this.l_fltNum = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:FlightNumber", nsmgr);
-            this.l_type = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:FlightId/ams:FlightKind", nsmgr);
-            this.l_sto = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:Value[@propertyName='ScheduledTime']", nsmgr);
-            this.l_flightUniqueID = GetValue(el, "./ams:FlightState/ams:LinkedFlight/ams:Value[@propertyName='FlightUniqueID']", nsmgr);
+            string ld = GetValue(el, "./aip:LinkedFlightID/aip:STO/aip:Date", nsmgr);
+            string lt = GetValue(el, "./aip:LinkedFlightID/aip:STO/aip:Time", nsmgr);
 
-            DateTime.TryParse(l_sto, out this.l_stoDate);
+            this.l_flightUniqueID = GetValue(el, "./aip:LinkedFlightID/aip:AIPUniqueID", nsmgr);
 
-            this.actype = GetValue(el, "./ams:FlightState/ams:AircraftType/ams:AircraftTypeId/ams:AircraftTypeCode[@codeContext='IATA']", nsmgr);
-            this.reg = GetValue(el, "./ams:FlightState/ams:Aircraft/ams:AircraftId/ams:Registration", nsmgr);
+            if (lt != null) {
+                DateTime.TryParse($"{ld}T{lt}", out this.l_stoDate);
+            } else {
+                DateTime.TryParse($"{ld}", out this.l_stoDate);
+            }
+
+            foreach (XmlNode res in el.SelectNodes(".//aip:ResourceAllocation", nsmgr)) {
+
+                string type = GetValue(res, "./aip:Resource/aip:ResourceType", nsmgr);
+                string code = GetValue(res, "./aip:Resource/aip:Code", nsmgr);
+                string name = null;
+                string additional = null;
+                string start = GetValue(res, "./aip:TimeSlot/aip:Start", nsmgr);
+                string stop = GetValue(res, "./aip:TimeSlot/aip:Stop", nsmgr);
+
+                resources.Add(new ResourceRecord(type, code, name, additional, start, stop));
+            }
+
+
+            this.actype = GetValue(el, "./aip:PrimaryAircraft/aip:Type/aip:IATA", nsmgr);
+            this.reg = GetValue(el, "./aip:PrimaryAircraft/aip:Registration", nsmgr);
         }
 
         private void ProcessAMSX(XmlElement el, XmlNamespaceManager nsmgr) {
@@ -140,6 +192,18 @@ namespace AMSUtilLib {
             this.actype = GetValue(el, "./ams:FlightState/ams:AircraftType/ams:AircraftTypeId/ams:AircraftTypeCode[@codeContext='IATA']", nsmgr);
             this.reg = GetValue(el, "./ams:FlightState/ams:Aircraft/ams:AircraftId/ams:Registration", nsmgr);
 
+            foreach (XmlNode res in el.SelectNodes(".//ams:StandSlots", nsmgr)) {
+
+                string type = "BAY";
+                string code = GetValue(res, ".//ams:Stand/ams:Value[@propertyName='Name']", nsmgr);
+                string name = null;
+                string additional = null;
+                string start = GetValue(res, ".//ams:Value[@propertyName='StartTime']", nsmgr);
+                string stop = GetValue(res, ".//ams:Value[@propertyName='EndTime']", nsmgr);
+
+                resources.Add(new ResourceRecord(type, code, name, additional, start, stop));
+            }
+
         }
 
         public bool ShowFlight() {
@@ -159,6 +223,14 @@ namespace AMSUtilLib {
             return show;
         }
 
+        public override string ToString() {
+            string f = $"<{airline}{fltNum}@{stoDate}/ {type} /{route} / {reg} / {actype}> <{l_airline}{l_fltNum}@{l_stoDate}/ {l_type} /{route} / {reg} / {actype}>";
+            foreach (ResourceRecord rec in resources) {
+                f = f + "\n" + rec;
+            }
+
+            return f;
+        }
         public string ToString(Dictionary<string, FlightRecord> fltMap) {
 
             string fltDesc = "===================";
@@ -279,6 +351,12 @@ namespace AMSUtilLib {
                 slotEndDateTime = DateTime.Parse(slotEnd);
             }
 
+            this.flight = flight;
+        }
+        public SlotRecord(ResourceRecord rec, FlightRecord flight) {
+            this.slotStand = rec.code;
+            this.slotStartDateTime = rec.startTime;
+            this.slotEndDateTime = rec.stopTime;
             this.flight = flight;
         }
     }

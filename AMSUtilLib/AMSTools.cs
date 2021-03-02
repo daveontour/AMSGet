@@ -150,7 +150,7 @@ namespace AMSUtilLib {
             }
         }
 
-        public List<FlightRecord> GetFlightRecords(int fromHoursOffset, int toHoursOffset) {
+        public static List<FlightRecord> GetFlightRecords(int fromHoursOffset, int toHoursOffset) {
             var list = new List<FlightRecord>();
             XmlElement flightsXML = GetFlightsXML(fromHoursOffset, toHoursOffset);
 

@@ -247,6 +247,16 @@ namespace AMSGet {
             [Option("ws", Required = false, HelpText = "Set the AMS Native Webservice Service URL")]
             public string WSURL { get; set; }
 
+            [Option("test", Required = false, HelpText = "Test Entry Point")]
+            public bool Test { get; set; }
+
+        }
+
+        [Verb("test", HelpText = "Test Entry Point")]
+        public class TestOptions {
+
+            [Option('f', "file", Required = false, HelpText = "File to save output to.")]
+            public string FileName { get; set; }
         }
         static void Main(string[] args) {
             try {
@@ -256,6 +266,7 @@ namespace AMSGet {
             }
 #if DEBUG
             // string[] arr = { "flight", "QR", "8961", "--tomorrow" };
+            //string[] arr = { "config", "--test" };
             //string[] arr = { "flight", "QR", "517", "--from", "2021/02/28", "--to", "2021/03/01" };
             string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--pdf", "C:/Users/dave_/Desktop/test.pdf", "--sets", "Unallocated", "HIA", "DIA", "Contingency" };
             //string[] arr = { "towings", "--from", "2021/02/21", "--to", "2021/03/01" };
@@ -292,6 +303,10 @@ namespace AMSGet {
                .WithNotParsed(errs => DisplayHelp(parserResult, errs));
 
 
+        }
+
+        private static object Test(object opts) {
+            throw new NotImplementedException();
         }
 
         private static void GetDowngrades(DownGradeOptions opts) {
@@ -388,6 +403,9 @@ namespace AMSGet {
         }
         private static void ShowConfig(Options opts) {
 
+            if (opts.Test) {
+                Test();
+            }
 
             if (opts.CheckAMS) {
                 Console.WriteLine("\nChecking connection to AMS..");
@@ -437,6 +455,14 @@ namespace AMSGet {
                 Console.WriteLine($"AMS Web Services Server URI: {Parameters.AMS_WEB_SERVICE_URI}");
                 Console.WriteLine($"AMS Access Token:            {Parameters.TOKEN}");
                 Console.WriteLine($"Airport Code:                {Parameters.APT_CODE}");
+            }
+
+        }
+
+        private static void Test() {
+            List<FlightRecord> recs = AMSTools.GetFlightRecords(-24, 24);
+            foreach (FlightRecord flight in recs) {
+                Console.WriteLine(flight.ToString());
             }
 
         }

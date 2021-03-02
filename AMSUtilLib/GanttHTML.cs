@@ -9,7 +9,7 @@ using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
 namespace AMSGet {
 
 
-    class GanttHTML {
+    public class GanttHTML {
 
         private XmlDocument doc = new XmlDocument();
         private XmlElement head;
@@ -121,7 +121,10 @@ namespace AMSGet {
 
             Console.WriteLine("Retrieving Flights");
             // using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
+
             {
+
+
 
                 XmlElement res = AMSTools.GetFlightsXML(-24, 24);
                 XmlNamespaceManager nsmgr = new XmlNamespaceManager(res.OwnerDocument.NameTable);
@@ -129,73 +132,146 @@ namespace AMSGet {
 
 
                 // Create the flight records and add them to the stands. Position them horizontally.
-                foreach (XmlElement el in res.SelectNodes("//ams:Flights/ams:Flight", nsmgr)) {
+                foreach (FlightRecord flight in AMSTools.GetFlightRecords(-24, 24)) {
                     {
-                        FlightRecord flight = new FlightRecord(el, nsmgr);
-
                         fltMap.Add(flight.flightUniqueID, flight);
 
-                        XmlNode slots = el.SelectSingleNode("./ams:FlightState/ams:StandSlots", nsmgr);
+                        bool noSlots = true;
 
-                        if (slots != null) {
-
-                            // Iterate through each of the Stand Slots for the flight
-
-                            foreach (XmlNode slot in slots.SelectNodes("./ams:StandSlot", nsmgr)) {
-                                SlotRecord slotRecord = new SlotRecord(slot, nsmgr, flight);
-
-                                if (slotRecord.slotStand == null) {
-                                    slotRecord.slotStand = "Unallocated";
-                                }
-
-                                if (!slotRecord.flight.ShowFlight()) {
-                                    continue;
-                                }
-
-                                if (slotRecord.slotEndDateTime < this.zeroTime || slotRecord.slotStartDateTime > this.zeroTime.AddHours(23)) {
-                                    //Outside range of Gantt
-                                    continue;
-                                }
-
-
-                                TimeSpan tss = slotRecord.slotStartDateTime - this.zeroTime;
-                                TimeSpan tse = slotRecord.slotEndDateTime - this.zeroTime;
-
-                                // End of slot before start of zeroTime 
-                                if (tse.TotalMinutes < 0) {
-                                    continue;
-                                }
-
-                                // Start of slot more than end of chart
-                                if (tss.TotalHours > 23) {
-                                    continue;
-                                }
-
-                                int width = Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes);
-                                int left = Convert.ToInt32(tss.TotalMinutes);
-                                if (left < 0) {
-                                    width += left;
-                                    left = 0;
-                                }
-
-                                slotRecord.left = left;
-                                slotRecord.width = width;
-                                slotRecord.row = 1;
-
-                                standMap[slotRecord.slotStand].slotList.Add(slotRecord);
-
+                        // Iterate through each of the Stand Slots for the flight
+                        foreach (ResourceRecord resRec in flight.resources) {
+                            if (resRec.type != "BAY") {
+                                continue;
                             }
-                        } else {
+                            noSlots = false;
+                            SlotRecord slotRecord = new SlotRecord(resRec, flight);
 
+                            if (slotRecord.slotStand == null) {
+                                slotRecord.slotStand = "Unallocated";
+                            }
+
+                            if (!slotRecord.flight.ShowFlight()) {
+                                continue;
+                            }
+
+                            if (slotRecord.slotEndDateTime < this.zeroTime || slotRecord.slotStartDateTime > this.zeroTime.AddHours(23)) {
+                                //Outside range of Gantt
+                                continue;
+                            }
+
+
+                            TimeSpan tss = slotRecord.slotStartDateTime - this.zeroTime;
+                            TimeSpan tse = slotRecord.slotEndDateTime - this.zeroTime;
+
+                            // End of slot before start of zeroTime 
+                            if (tse.TotalMinutes < 0) {
+                                continue;
+                            }
+
+                            // Start of slot more than end of chart
+                            if (tss.TotalHours > 23) {
+                                continue;
+                            }
+
+                            int width = Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes);
+                            int left = Convert.ToInt32(tss.TotalMinutes);
+                            if (left < 0) {
+                                width += left;
+                                left = 0;
+                            }
+
+                            slotRecord.left = left;
+                            slotRecord.width = width;
+                            slotRecord.row = 1;
+
+                            standMap[slotRecord.slotStand].slotList.Add(slotRecord);
+
+                        }
+                        if (noSlots) {
                             // No Stand Slot Defined for the flight
                             SlotRecord slotRecord = new SlotRecord(null, nsmgr, flight);
                             standMap["Unallocated"].slotList.Add(slotRecord);
-
                         }
                     }
                 }
 
             }
+
+            //{
+
+            //    XmlElement res = AMSTools.GetFlightsXML(-24, 24);
+            //    XmlNamespaceManager nsmgr = new XmlNamespaceManager(res.OwnerDocument.NameTable);
+            //    nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
+
+
+            //    // Create the flight records and add them to the stands. Position them horizontally.
+            //    foreach (XmlElement el in res.SelectNodes("//ams:Flights/ams:Flight", nsmgr)) {
+            //        {
+            //            FlightRecord flight = new FlightRecord(el, nsmgr);
+
+            //            fltMap.Add(flight.flightUniqueID, flight);
+
+            //            XmlNode slots = el.SelectSingleNode("./ams:FlightState/ams:StandSlots", nsmgr);
+
+            //            if (slots != null) {
+
+            //                // Iterate through each of the Stand Slots for the flight
+
+            //                foreach (XmlNode slot in slots.SelectNodes("./ams:StandSlot", nsmgr)) {
+            //                    SlotRecord slotRecord = new SlotRecord(slot, nsmgr, flight);
+
+            //                    if (slotRecord.slotStand == null) {
+            //                        slotRecord.slotStand = "Unallocated";
+            //                    }
+
+            //                    if (!slotRecord.flight.ShowFlight()) {
+            //                        continue;
+            //                    }
+
+            //                    if (slotRecord.slotEndDateTime < this.zeroTime || slotRecord.slotStartDateTime > this.zeroTime.AddHours(23)) {
+            //                        //Outside range of Gantt
+            //                        continue;
+            //                    }
+
+
+            //                    TimeSpan tss = slotRecord.slotStartDateTime - this.zeroTime;
+            //                    TimeSpan tse = slotRecord.slotEndDateTime - this.zeroTime;
+
+            //                    // End of slot before start of zeroTime 
+            //                    if (tse.TotalMinutes < 0) {
+            //                        continue;
+            //                    }
+
+            //                    // Start of slot more than end of chart
+            //                    if (tss.TotalHours > 23) {
+            //                        continue;
+            //                    }
+
+            //                    int width = Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes);
+            //                    int left = Convert.ToInt32(tss.TotalMinutes);
+            //                    if (left < 0) {
+            //                        width += left;
+            //                        left = 0;
+            //                    }
+
+            //                    slotRecord.left = left;
+            //                    slotRecord.width = width;
+            //                    slotRecord.row = 1;
+
+            //                    standMap[slotRecord.slotStand].slotList.Add(slotRecord);
+
+            //                }
+            //            } else {
+
+            //                // No Stand Slot Defined for the flight
+            //                SlotRecord slotRecord = new SlotRecord(null, nsmgr, flight);
+            //                standMap["Unallocated"].slotList.Add(slotRecord);
+
+            //            }
+            //        }
+            //    }
+
+            //}
 
             // Get the towings
             {
@@ -495,8 +571,18 @@ namespace AMSGet {
             int top = 2 + (slot.row - 1) * 42;
             outerDiv.SetAttribute("style", $"position:absolute; left:{slot.left + 150}px; top:{top}px;");
 
+            int width = slot.width;
+
+            //Correct for border width
+            width = width - 2;
+
+            //Correct width for wider right border with tows
+            if (slot.towToStand != null) {
+                width = width - 1;
+            }
+
             //Horizontal position in the row
-            fltDiv.SetAttribute("style", $"width:{slot.width}px; border-radius:{radius}px; ");
+            fltDiv.SetAttribute("style", $"width:{width}px; border-radius:{radius}px; ");
 
 
 
