@@ -85,6 +85,9 @@ namespace AMSUtilLib {
         public string reg;
         public DateTime stoDate;
         public DateTime l_stoDate;
+        public string noiseCategory;
+
+        public bool violateRule = false;
 
         public List<ResourceRecord> resources = new List<ResourceRecord>();
 
@@ -117,6 +120,8 @@ namespace AMSUtilLib {
 
         public FlightRecord(XmlElement el, XmlNamespaceManager nsmgr) {
 
+            // Parse differently, depending on the format that was retrieved
+
             if (nsmgr.LookupNamespace("aip") == null) {
                 ProcessAMSX(el, nsmgr);
             } else {
@@ -130,6 +135,8 @@ namespace AMSUtilLib {
             this.type = GetValue(el, "./aip:FlightID/aip:FlightNature", nsmgr);
             this.sto = GetValue(el, "./aip:FlightID/aip:STO/aip:Date", nsmgr) + "T" + GetValue(el, "./aip:FlightID/aip:STO/aip:Time", nsmgr);
             this.flightUniqueID = GetValue(el, "./aip:FlightID/aip:AIPUniqueID", nsmgr);
+
+
 
             DateTime.TryParse(sto, out this.stoDate);
 
@@ -177,6 +184,8 @@ namespace AMSUtilLib {
             this.sto = GetValue(el, "./ams:FlightState/ams:ScheduledTime", nsmgr);
             this.flightUniqueID = GetValue(el, "./ams:FlightState/ams:Value[@propertyName='FlightUniqueID']", nsmgr);
 
+            this.violateRule = bool.Parse(GetValue(el, "./ams:FlightState/ams:Value[@propertyName='B---_Violate_Rule']", nsmgr));
+
             DateTime.TryParse(sto, out this.stoDate);
 
             this.route = GetValue(el, "./ams:FlightState/ams:Route/ams:ViaPoints/ams:RouteViaPoint[@sequenceNumber='0']/ams:AirportCode[@codeContext='IATA']", nsmgr);
@@ -206,6 +215,13 @@ namespace AMSUtilLib {
 
         }
 
+        public bool IsLinked() {
+            if (l_flightUniqueID != null) {
+                return true;
+            } else {
+                return false;
+            }
+        }
         public bool ShowFlight() {
             bool show = true;
 
@@ -223,6 +239,76 @@ namespace AMSUtilLib {
             return show;
         }
 
+        public string GetCSSClass(Dictionary<string, FlightRecord> fltMap) {
+
+            if (actype == "388" || actype == "74N") {
+                if (this.violateRule) {
+                    return "codeFAlert";
+                }
+                if (fltMap.ContainsKey(l_flightUniqueID)) {
+                    if (fltMap[l_flightUniqueID].violateRule) {
+                        return "codeFAlert";
+                    }
+                }
+            }
+            if (actype == "32A" || actype == "32B") {
+                if (this.violateRule) {
+                    return "sharkletAlert";
+                }
+                if (l_flightUniqueID != null) {
+                    if (fltMap.ContainsKey(l_flightUniqueID)) {
+                        if (fltMap[l_flightUniqueID].violateRule) {
+                            return "sharkletAlert";
+                        }
+                    }
+                }
+            }
+            {
+                if (this.violateRule && this.noiseCategory == "9") {
+                    return "ruleEViolation";
+                }
+                if (l_flightUniqueID != null) {
+                    if (fltMap.ContainsKey(l_flightUniqueID)) {
+                        if (fltMap[l_flightUniqueID].violateRule && fltMap[l_flightUniqueID].noiseCategory == "9") {
+                            return "ruleEViolation";
+                        }
+                    }
+                }
+            }
+            if (actype == "788"
+                || actype == "333"
+                || actype == "789"
+                || actype == "332"
+                || actype == "77L"
+                || actype == "77W"
+                || actype == "346"
+                || actype == "313"
+                || actype == "772"
+                || actype == "773"
+                || actype == "359"
+                || actype == "351") {
+                return "icaoCodeE";
+            }
+            if (actype == "320" || actype == "321") {
+                return "icaoCodeC";
+            }
+            if (actype == "32A" || actype == "32B") {
+                return "icaoCodeCSharklet";
+            }
+            if (actype == "388") {
+                return "icaoCodeF";
+            }
+            if (actype == "33X" || actype == "77X") {
+                return "icaoCodeECargo";
+            }
+            if (actype == "74N") {
+                return "icaoCodeFCargo";
+            }
+            if (IsLinked()) {
+                return "flightLinked";
+            }
+            return "flightUnlinked";
+        }
         public override string ToString() {
             string f = $"<{airline}{fltNum}@{stoDate}/ {type} /{route} / {reg} / {actype}> <{l_airline}{l_fltNum}@{l_stoDate}/ {l_type} /{route} / {reg} / {actype}>";
             foreach (ResourceRecord rec in resources) {

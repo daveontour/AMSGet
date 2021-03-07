@@ -477,10 +477,13 @@ namespace AMSGet {
                 }
                 fltDiv.SetAttribute("class", clazz);
             } else {
-                string clazz = "flight";
-                if (slot.slotStand == "Unallocated") {
-                    clazz = "flightUnallocated";
-                }
+                string clazz = "flightbasic " + f.GetCSSClass(this.fltMap);
+
+
+
+                //if (slot.slotStand == "Unallocated") {
+                //    clazz = "flightUnallocated";
+                //}
                 if (slot.towToStand != null) {
                     clazz += " fromStand";
                 }
@@ -532,6 +535,8 @@ namespace AMSGet {
 
             XmlElement timeDiv = doc.CreateElement("div");
             timeDiv.InnerText = $"AMS Gantt Chart @ {DateTime.Now}";
+
+            body.SetAttribute("style", "background:lightgray");
 
             body.AppendChild(timeDiv);
             body.AppendChild(GetSets());

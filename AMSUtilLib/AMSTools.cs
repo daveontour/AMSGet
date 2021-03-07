@@ -211,7 +211,6 @@ namespace AMSUtilLib {
                     return doc.DocumentElement;
                 }
             } catch (Exception ex) {
-
                 Console.WriteLine(ex.Message);
                 Console.WriteLine("Could not use Flight Query API, so will use AMS direct");
                 AIP_FLIGHTS = false;

@@ -15,27 +15,28 @@
 
 .downgradePartial {
     background: gray;
-    color: black;
+    color: white;
     padding-top: 4px;
     padding-left: 2px;
     white-space: nowrap;
     font-size: 9px;
     font-style: italic;
+    background: repeating-linear-gradient( 45deg, #606dbc, #606dbc 10px, #465298 10px, #465298 20px );
 }
 
 .downgradeFull {
-    background: yellow;
     color: black;
     padding-top: 4px;
     padding-left: 2px;
     white-space: nowrap;
     font-size: 9px;
     font-style: italic;
+    background: repeating-linear-gradient( 45deg, #ffff00, #ffff00 10px, white 10px, lightgray 20px );
 }
 
 .flight {
     background: #00FF00;
-    color: black;
+    color: white;
     top: 12px;
     height: 14px;
     position: absolute;
@@ -45,6 +46,66 @@
     padding-left: 0px;
     white-space: nowrap;
 }
+
+.flightbasic {
+    color: white;
+    top: 12px;
+    height: 14px;
+    position: absolute;
+    border: 1px solid black;
+    font-size: 12px;
+    font-family: Verdana;
+    padding-left: 0px;
+    white-space: nowrap;
+}
+
+.flightLinked {
+    background: #4099ff;
+}
+
+.flightUnlinked {
+    background: #83868a;
+}
+
+.icaoCodeE {
+    background: #9932CC;
+}
+
+.icaoCodeC {
+    background: #32892b;
+}
+
+.icaoCodeCSharklet {
+    background: #154115;
+}
+
+.icaoCodeF {
+    background: #800000;
+}
+
+.icaoCodeECargo {
+    background: #d457cf;
+}
+
+.icaoCodeFCargo {
+    background: #bd1182;
+}
+
+.ruleEViolation {
+    background: #d013d8;
+    background-image: linear-gradient(90deg, #d013d8, #d4d813);
+}
+
+.sharkletAlert {
+    background: #154115;
+    background-image: linear-gradient(90deg, #154115, #c8ef15);
+}
+
+.codeFAlert {
+    background: #800000;
+    background-image: linear-gradient(90deg, #800000, #c8ef15);
+}
+
 
 .flightUnallocated {
     background: pink;

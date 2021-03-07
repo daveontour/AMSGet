@@ -1,7 +1,6 @@
 ﻿using AMSUtilLib;
 using CommandLine;
 using CommandLine.Text;
-using IronPdf;
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
@@ -201,13 +200,8 @@ namespace AMSGet {
             [Option('h', "html", Required = true, HelpText = "HTML file to save output to")]
             public string HTML { get; set; }
 
-            //[Option('p', "pdf", Required = false, HelpText = "PDF file to save output to")]
-            //public string PDF { get; set; }
-
             [Option('s', "sets", Required = true, HelpText = "The Area Sets to output")]
             public IEnumerable<string> Sets { get; set; }
-
-
         }
         [Verb("standdowngrades", HelpText = "Get downgrades")]
         public class DownGradeOptions {
@@ -249,6 +243,9 @@ namespace AMSGet {
 
             [Option("ws", Required = false, HelpText = "Set the AMS Native Webservice Service URL")]
             public string WSURL { get; set; }
+
+            [Option("fqc", Required = false, HelpText = "Set the Flight Query Cache API service URL")]
+            public string FlightQueryCacheURI { get; set; }
 
             [Option("test", Required = false, HelpText = "Test Entry Point")]
             public bool Test { get; set; }
@@ -309,9 +306,13 @@ namespace AMSGet {
 
         }
 
-        private static object Test(object opts) {
-            throw new NotImplementedException();
-        }
+
+        static Func<string> dynamicData = () =>
+        {
+            var line5 = "\nExamples:\n\namsget help flights\namsget flights --today\namsget flights --from 2020/06/30 --to 2020/07/07\namsget flights --from 2020/06/30 --to 2020/07/07 --csv -f flights.csv\namsget flight QF 001 --yesterday\namsget stand A10\namsget airlines\namsget checkbasedata";
+            return $"{line5}";
+        };
+
 
         private static void GetDowngrades(DownGradeOptions opts) {
             if (!AMSTools.FileOK(opts.FileName)) {
@@ -338,7 +339,6 @@ namespace AMSGet {
                 }
             }
         }
-
         private static void SaveGantt(GanttOptions opts) {
 
             //if (opts.PDF == null && opts.HTML == null) {
@@ -382,19 +382,11 @@ namespace AMSGet {
             CheckAMSData check = new CheckAMSData(opts.ShowAll, opts.Delimiter, opts.RulesFile, opts.DataFromFile);
             check.Start();
         }
-
-        static Func<string> dynamicData = () =>
-        {
-            var line5 = "\nExamples:\n\namsget help flights\namsget flights --today\namsget flights --from 2020/06/30 --to 2020/07/07\namsget flights --from 2020/06/30 --to 2020/07/07 --csv -f flights.csv\namsget flight QF 001 --yesterday\namsget stand A10\namsget airlines\namsget checkbasedata";
-            return $"{line5}";
-        };
-
-
-        static void DisplayHelp<T>(ParserResult<T> result, IEnumerable<Error> errs) {
+        private static void DisplayHelp<T>(ParserResult<T> result, IEnumerable<Error> errs) {
             var helpText = HelpText.AutoBuild(result, h =>
             {
                 h.Heading = "\nAMSGet - Utility to get and check data quickly from SITA AMS";
-                h.Copyright = "Copyright 2020";
+                h.Copyright = "Copyright 2020-2021";
                 h.AdditionalNewLineAfterOption = false;
                 h.AddPostOptionsLine(dynamicData());
                 h.AutoHelp = true;
@@ -405,10 +397,17 @@ namespace AMSGet {
             );
             Console.WriteLine(helpText);
         }
+        private static void Test() {
+            List<FlightRecord> recs = AMSTools.GetFlightRecords(-24, 24);
+            foreach (FlightRecord flight in recs) {
+                Console.WriteLine(flight.ToString());
+            }
+        }
         private static void ShowConfig(Options opts) {
 
             if (opts.Test) {
                 Test();
+                return;
             }
 
             if (opts.CheckAMS) {
@@ -449,28 +448,27 @@ namespace AMSGet {
                 node.Attribute("value").Value = opts.WSURL;
                 config.Save(@"AMSUtilLib.dll.config");
             }
+            if (opts.FlightQueryCacheURI != null) {
+                XElement config = ReadConfigFile();
+                XElement node = config.Descendants("add").FirstOrDefault(el => el.Attribute("key").Value == "FlightQueryAPIURI");
+                node.Attribute("value").Value = opts.WSURL;
+                config.Save(@"AMSUtilLib.dll.config");
+            }
 
 
             Type type = typeof(Parameters);
             System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(type.TypeHandle);
 
             if (opts.Verbose) {
-                Console.WriteLine($"\nAMS Rest Server URI:         {Parameters.AMS_REST_SERVICE_URI}");
+                Console.WriteLine($"\nAMS Rest Server URI:       {Parameters.AMS_REST_SERVICE_URI}");
                 Console.WriteLine($"AMS Web Services Server URI: {Parameters.AMS_WEB_SERVICE_URI}");
                 Console.WriteLine($"AMS Access Token:            {Parameters.TOKEN}");
+                Console.WriteLine($"Flight Query API URI:        {Parameters.FLIGHT_QUERY_API_URI}");
+                Console.WriteLine($"Use Flight Query API URI:    {Parameters.USE_FLIGHT_QUERY_API}");
                 Console.WriteLine($"Airport Code:                {Parameters.APT_CODE}");
             }
 
         }
-
-        private static void Test() {
-            List<FlightRecord> recs = AMSTools.GetFlightRecords(-24, 24);
-            foreach (FlightRecord flight in recs) {
-                Console.WriteLine(flight.ToString());
-            }
-
-        }
-
         private static XElement ReadConfigFile() {
             XElement config = XElement.Load(@"AMSUtilLib.dll.config");
             return config;
@@ -788,7 +786,6 @@ namespace AMSGet {
             }
             return 1;
         }
-
         private static string GetCSV(string xml, string tag, BaseType type, string propertyHead, string flightID = null, bool includeLinked = false) {
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
