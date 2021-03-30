@@ -8,32 +8,32 @@ using System.Xml;
 namespace AMSUtilLib {
 
     abstract public class Record {
+
         public string GetValue(XmlElement el, string xpath, XmlNamespaceManager nsmgr) {
-
             try {
                 return el.SelectSingleNode(xpath, nsmgr).InnerText;
             } catch (Exception) {
                 return null;
             }
         }
+
         public string GetValue(XmlNode el, string xpath, XmlNamespaceManager nsmgr) {
-
             try {
                 return el.SelectSingleNode(xpath, nsmgr).InnerText;
             } catch (Exception) {
                 return null;
             }
         }
-        public string GetValue(XmlElement el, string xpath) {
 
+        public string GetValue(XmlElement el, string xpath) {
             try {
                 return el.SelectSingleNode(xpath).InnerText;
             } catch (Exception) {
                 return null;
             }
         }
-        public string GetValue(XmlNode el, string xpath) {
 
+        public string GetValue(XmlNode el, string xpath) {
             try {
                 return el.SelectSingleNode(xpath).InnerText;
             } catch (Exception) {
@@ -91,7 +91,6 @@ namespace AMSUtilLib {
 
         public List<ResourceRecord> resources = new List<ResourceRecord>();
 
-
         public string actype;
 
         public string FlightDescriptor {
@@ -102,9 +101,9 @@ namespace AMSUtilLib {
                 } else {
                     return d + "D";
                 }
-
             }
         }
+
         public string LinkedFlightDescriptor {
             get {
                 string d = $"{l_airline}{l_fltNum}@{l_stoDate.ToString("yyyy-MM-ddTHH:mm")}";
@@ -113,13 +112,10 @@ namespace AMSUtilLib {
                 } else {
                     return d + "D";
                 }
-
             }
         }
 
-
         public FlightRecord(XmlElement el, XmlNamespaceManager nsmgr) {
-
             // Parse differently, depending on the format that was retrieved
 
             if (nsmgr.LookupNamespace("aip") == null) {
@@ -135,8 +131,6 @@ namespace AMSUtilLib {
             this.type = GetValue(el, "./aip:FlightID/aip:FlightNature", nsmgr);
             this.sto = GetValue(el, "./aip:FlightID/aip:STO/aip:Date", nsmgr) + "T" + GetValue(el, "./aip:FlightID/aip:STO/aip:Time", nsmgr);
             this.flightUniqueID = GetValue(el, "./aip:FlightID/aip:AIPUniqueID", nsmgr);
-
-
 
             DateTime.TryParse(sto, out this.stoDate);
 
@@ -161,7 +155,6 @@ namespace AMSUtilLib {
             }
 
             foreach (XmlNode res in el.SelectNodes(".//aip:ResourceAllocation", nsmgr)) {
-
                 string type = GetValue(res, "./aip:Resource/aip:ResourceType", nsmgr);
                 string code = GetValue(res, "./aip:Resource/aip:Code", nsmgr);
                 string name = null;
@@ -171,7 +164,6 @@ namespace AMSUtilLib {
 
                 resources.Add(new ResourceRecord(type, code, name, additional, start, stop));
             }
-
 
             this.actype = GetValue(el, "./aip:PrimaryAircraft/aip:Type/aip:IATA", nsmgr);
             this.reg = GetValue(el, "./aip:PrimaryAircraft/aip:Registration", nsmgr);
@@ -201,8 +193,7 @@ namespace AMSUtilLib {
             this.actype = GetValue(el, "./ams:FlightState/ams:AircraftType/ams:AircraftTypeId/ams:AircraftTypeCode[@codeContext='IATA']", nsmgr);
             this.reg = GetValue(el, "./ams:FlightState/ams:Aircraft/ams:AircraftId/ams:Registration", nsmgr);
 
-            foreach (XmlNode res in el.SelectNodes(".//ams:StandSlots", nsmgr)) {
-
+            foreach (XmlNode res in el.SelectNodes(".//ams:StandSlot", nsmgr)) {
                 string type = "BAY";
                 string code = GetValue(res, ".//ams:Stand/ams:Value[@propertyName='Name']", nsmgr);
                 string name = null;
@@ -212,7 +203,6 @@ namespace AMSUtilLib {
 
                 resources.Add(new ResourceRecord(type, code, name, additional, start, stop));
             }
-
         }
 
         public bool IsLinked() {
@@ -222,6 +212,7 @@ namespace AMSUtilLib {
                 return false;
             }
         }
+
         public bool ShowFlight() {
             bool show = true;
 
@@ -240,7 +231,6 @@ namespace AMSUtilLib {
         }
 
         public string GetCSSClass(Dictionary<string, FlightRecord> fltMap) {
-
             if (actype == "388" || actype == "74N") {
                 if (this.violateRule) {
                     return "codeFAlert";
@@ -309,6 +299,7 @@ namespace AMSUtilLib {
             }
             return "flightUnlinked";
         }
+
         public override string ToString() {
             string f = $"<{airline}{fltNum}@{stoDate}/ {type} /{route} / {reg} / {actype}> <{l_airline}{l_fltNum}@{l_stoDate}/ {l_type} /{route} / {reg} / {actype}>";
             foreach (ResourceRecord rec in resources) {
@@ -317,8 +308,8 @@ namespace AMSUtilLib {
 
             return f;
         }
-        public string ToString(Dictionary<string, FlightRecord> fltMap) {
 
+        public string ToString(Dictionary<string, FlightRecord> fltMap) {
             string fltDesc = "===================";
 
             // Departure and linked Arrival
@@ -337,7 +328,6 @@ namespace AMSUtilLib {
             }
 
             return fltDesc;
-
         }
     }
 
@@ -378,15 +368,14 @@ namespace AMSUtilLib {
             string status = this.fullUnavailable ? "Full" : "Partial";
             return $"Downgraded Stands: {stands} \"{status}\":\"{start.ToString("YYYY-MM-dd HH:mm")}\":\"{end.ToString("YYYY-MM-dd HH:mm")}\":\"{comment}\":\"{reason}\"";
         }
-        public string ToStringPartial() {
 
+        public string ToStringPartial() {
             string s = $"Partial Downgrade. From: {start:yyyy-MM-dd HH:mm},  To: {end:yyyy-MM-dd HH:mm}, \"{comment}\":\"{reason}\"";
             if (fullUnavailable) {
                 s = $"Full Downgrade. From: {start:yyyy-MM-dd HH:mm},  To: {end:yyyy-MM-dd HH:mm} \"{comment}\":\"{reason}\"";
             }
             return s;
         }
-
     }
 
     public class StandRecord : Record {
@@ -406,7 +395,9 @@ namespace AMSUtilLib {
             this.area = stand.SelectSingleNode("./Area").InnerText;
             this.sortOrder = int.Parse(stand.SelectSingleNode("./SortOrder").InnerText);
         }
-        public StandRecord() { }
+
+        public StandRecord() {
+        }
     }
 
     public class SlotRecord : Record {
@@ -425,7 +416,6 @@ namespace AMSUtilLib {
         public string towToStand = null;
 
         public SlotRecord(XmlNode slot, XmlNamespaceManager nsmgr, FlightRecord flight) {
-
             this.slotStart = GetValue(slot, "./ams:Value[@propertyName='StartTime']", nsmgr);
             this.slotEnd = GetValue(slot, "./ams:Value[@propertyName='EndTime']", nsmgr);
             this.slotStand = GetValue(slot, "./ams:Stand/ams:Value[@propertyName='Name']", nsmgr);
@@ -439,6 +429,7 @@ namespace AMSUtilLib {
 
             this.flight = flight;
         }
+
         public SlotRecord(ResourceRecord rec, FlightRecord flight) {
             this.slotStand = rec.code;
             this.slotStartDateTime = rec.startTime;
@@ -458,7 +449,6 @@ namespace AMSUtilLib {
         public DateTime end;
 
         public TowRecord(XmlNode tow) {
-
             var first = GetValue(tow, "./FlightDescriptors/FlightDescriptor[1]");
             if (first != null) {
                 if (first.EndsWith("A")) {
@@ -489,14 +479,13 @@ namespace AMSUtilLib {
     }
 
     public class Bucket {
-
         private int minSlotLength = 350;
         public List<List<SlotRecord>> bucket = new List<List<SlotRecord>>();
 
-        public Bucket() { }
+        public Bucket() {
+        }
 
         public void AddToBucket(SlotRecord slot) {
-
             if (slot.left == 0 && slot.width == 0) {
                 return;
             }
@@ -547,7 +536,6 @@ namespace AMSUtilLib {
         }
 
         public bool CanAddToRow(int rowIndex, SlotRecord slot) {
-
             List<SlotRecord> row = bucket[rowIndex];
             foreach (SlotRecord slotRecord in row) {
                 int currentLeft = slotRecord.left;
@@ -572,5 +560,4 @@ namespace AMSUtilLib {
             return bucket.Count;
         }
     }
-
 }

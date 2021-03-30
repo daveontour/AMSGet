@@ -8,9 +8,7 @@ using WorkBridge.Modules.AMS.AMSIntegrationWebAPI.Srv;
 
 namespace AMSGet {
 
-
     public class GanttHTML {
-
         private XmlDocument doc = new XmlDocument();
         private XmlElement head;
         private XmlElement body;
@@ -23,15 +21,16 @@ namespace AMSGet {
         private XmlDocument setsDoc = new XmlDocument();
         private Dictionary<string, StandRecord> standMap = new Dictionary<string, StandRecord>();
         private Dictionary<string, List<StandRecord>> areaMap = new Dictionary<string, List<StandRecord>>();
+
         //private Dictionary<string, List<SlotRecord>> standSlotMap = new Dictionary<string, List<SlotRecord>>();
         private Dictionary<string, FlightRecord> fltMap = new Dictionary<string, FlightRecord>();
-        IEnumerable<string> sets;
+
+        private IEnumerable<string> sets;
 
         public string css;
         public int minSeparation = 400;
 
         public GanttHTML(IEnumerable<string> sets) {
-
             this.sets = sets;
 
             StandRecord unallocated = new StandRecord();
@@ -46,8 +45,7 @@ namespace AMSGet {
             u.Add(unallocated);
             areaMap.Add("Unallocated", u);
 
-
-            root = doc.CreateElement("hmtl");
+            root = doc.CreateElement("html");
             doc.AppendChild(root);
             this.head = doc.CreateElement("head");
             this.body = doc.CreateElement("body");
@@ -66,12 +64,10 @@ namespace AMSGet {
         }
 
         public bool Prepare() {
-
-            // Calculate the time of the zero time 
+            // Calculate the time of the zero time
             DateTime now = DateTime.Now;
             zeroTime = now.AddHours(-3);
             zeroTime = new DateTime(zeroTime.Year, zeroTime.Month, zeroTime.Day, zeroTime.Hour, 0, 0);
-
 
             head.AppendChild(style);
             root.AppendChild(head);
@@ -84,7 +80,6 @@ namespace AMSGet {
             } catch (Exception e) {
                 Console.WriteLine(e.Message);
             }
-
 
             Console.WriteLine("Retrieving Stands");
 
@@ -101,7 +96,6 @@ namespace AMSGet {
 
             Console.WriteLine("Retrieving Downgrades");
             using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
-
                 // Get the Downgrade records and add them to the appropriat stand
                 try {
                     XmlElement xdowngrades = client.GetStandDowngrades(Parameters.TOKEN, DateTime.Now.AddHours(-24), DateTime.Now.AddHours(24), Parameters.APT_CODE, AirportIdentifierType.IATACode);
@@ -113,7 +107,6 @@ namespace AMSGet {
                             standMap[standID].downgradeList.Add(drec);
                         }
                     }
-
                 } catch (Exception e) {
                     Debug.WriteLine(e.Message);
                 }
@@ -121,18 +114,16 @@ namespace AMSGet {
 
             Console.WriteLine("Retrieving Flights");
             // using (AMSIntegrationServiceClient client = new AMSIntegrationServiceClient(AMSTools.GetWSBinding(), AMSTools.GetWSEndPoint())) {
-
             {
-
-
-
                 //XmlElement res = AMSTools.GetFlightsXML(-24, 24);
                 //XmlNamespaceManager nsmgr = new XmlNamespaceManager(res.OwnerDocument.NameTable);
                 //nsmgr.AddNamespace("ams", "http://www.sita.aero/ams6-xml-api-datatypes");
 
-
                 // Create the flight records and add them to the stands. Position them horizontally.
-                foreach (FlightRecord flight in AMSTools.GetFlightRecords(-24, 24)) {
+
+                var flts = AMSTools.GetFlightRecords(-24, 24);
+
+                foreach (FlightRecord flight in flts) {
                     {
                         fltMap.Add(flight.flightUniqueID, flight);
 
@@ -159,11 +150,10 @@ namespace AMSGet {
                                 continue;
                             }
 
-
                             TimeSpan tss = slotRecord.slotStartDateTime - this.zeroTime;
                             TimeSpan tse = slotRecord.slotEndDateTime - this.zeroTime;
 
-                            // End of slot before start of zeroTime 
+                            // End of slot before start of zeroTime
                             if (tse.TotalMinutes < 0) {
                                 continue;
                             }
@@ -185,7 +175,6 @@ namespace AMSGet {
                             slotRecord.row = 1;
 
                             standMap[slotRecord.slotStand].slotList.Add(slotRecord);
-
                         }
                         if (noSlots) {
                             // No Stand Slot Defined for the flight
@@ -194,7 +183,6 @@ namespace AMSGet {
                         }
                     }
                 }
-
             }
 
             // Get the towings
@@ -223,7 +211,6 @@ namespace AMSGet {
                         Debug.WriteLine(e.Message);
                     }
                 }
-
             }
             // Position the flight vertically withing row to avoid overlays
 
@@ -235,8 +222,9 @@ namespace AMSGet {
 
             return true;
         }
+
         private void DeconflictSlotOverlay() {
-            // Go through the slots for each stand and make sure they dont overlay each other 
+            // Go through the slots for each stand and make sure they dont overlay each other
             // By moving them to the next row if necessary.
             foreach (var pair in this.standMap) {
                 StandRecord stand = pair.Value;
@@ -247,13 +235,12 @@ namespace AMSGet {
                     continue;
                 }
 
-                //Sort from lowest to highest. 
+                //Sort from lowest to highest.
                 stand.slotList.Sort((p, q) => p.left.CompareTo(q.left));
 
                 Bucket bucket = new Bucket();
                 stand.slotList = bucket.GetSlotsList(stand);
                 stand.numRows = bucket.GetRows();
-
             }
 
             // Now Lets adjust for flight allocated to downgrade stands
@@ -290,10 +277,7 @@ namespace AMSGet {
         }
 
         private void AddTowFlags() {
-
-
             foreach (var pair in this.standMap) {
-
                 StandRecord stand = pair.Value;
                 foreach (TowRecord rec in stand.fromTows) {
                     foreach (SlotRecord slot in stand.slotList) {
@@ -303,10 +287,9 @@ namespace AMSGet {
                             || flt.LinkedFlightDescriptor == rec.arrDesc
                             || flt.LinkedFlightDescriptor == rec.depDesc
                             ) {
-                            slot.towToStand = $" ({rec.toStand})";
+                            slot.towToStand = $"{rec.toStand}";
                         }
                     }
-
                 }
 
                 foreach (TowRecord rec in stand.toTows) {
@@ -317,16 +300,14 @@ namespace AMSGet {
                             || flt.LinkedFlightDescriptor == rec.arrDesc
                             || flt.LinkedFlightDescriptor == rec.depDesc
                             ) {
-                            slot.towFromStand = $" ({rec.fromStand})";
+                            slot.towFromStand = $"{rec.fromStand}";
                         }
                     }
-
                 }
-
             }
         }
-        public XmlElement AddGanttTable(string area) {
 
+        public XmlElement AddGanttTable(string area) {
             Console.WriteLine($"Writing output for area {area}");
             XmlElement gantt = doc.CreateElement("div");
 
@@ -340,14 +321,11 @@ namespace AMSGet {
 
             gantt.AppendChild(title);
 
-
-
             // The top row showing the time markers
             XmlElement timeRow = doc.CreateElement("div");
             timeRow.SetAttribute("style", "width: 100px; height: 32px; position: relative; display: flex; align-items:center; border-bottom: solid 1px gray; width:1590px");
 
             DateTime marker = zeroTime;
-
 
             for (int i = 0; i < 24; i++) {
                 XmlElement cell = doc.CreateElement("div");
@@ -386,8 +364,6 @@ namespace AMSGet {
                     }
                     width = Math.Min(Convert.ToInt32(tse.TotalMinutes - tss.TotalMinutes), 1440);
 
-
-
                     XmlElement dgDiv = doc.CreateElement("div");
                     dgDiv.SetAttribute("style", $"left:{left + 150}px; width:{width}px; top: 2px; height:{32 + (stand.numRows - 1) * 42 }px; position:absolute; border: 1px solid black;  font-size:12px; font-family: Verdana;  padding-left:2px");
 
@@ -401,13 +377,11 @@ namespace AMSGet {
                 }
 
                 foreach (SlotRecord slot in stand.slotList) {
-
                     if (slot.left == 0 && slot.width == 0) {
                         continue;
                     }
 
                     row.AppendChild(CreateSlotDiv(slot, stand.downgradeList));
-
                 }
                 gantt.AppendChild(row);
             }
@@ -418,7 +392,6 @@ namespace AMSGet {
         }
 
         private XmlElement CreateSlotDiv(SlotRecord slot, List<DownGradeRecord> downgradeList) {
-
             //Adjust so dont overflow end of gantt
             if (slot.left + slot.width > 1440) {
                 slot.width = 1440 - slot.left;
@@ -434,16 +407,36 @@ namespace AMSGet {
             String fromTime = slot.slotStartDateTime.ToString("HH:mm");
             String toTime = slot.slotEndDateTime.ToString("HH:mm");
 
-
             fromTimeDiv.InnerText = fromTime;
             toTimeDiv.InnerText = toTime;
+
+            if (slot.towToStand != null) {
+                toTimeDiv.InnerText = $"{toTime} (";
+                XmlElement d = doc.CreateElement("span");
+                d.SetAttribute("style", $"font-size:10px");
+                d.InnerText = "&#8614;";
+                toTimeDiv.AppendChild(d);
+                XmlElement d2 = doc.CreateElement("span");
+                d2.InnerText = $" {slot.towToStand})";
+                toTimeDiv.AppendChild(d2);
+            }
+
+            if (slot.towFromStand != null) {
+                fromTimeDiv.InnerText = $"{fromTime} ({slot.towFromStand}";
+                XmlElement d = doc.CreateElement("span");
+                d.SetAttribute("style", $"font-size:10px");
+                d.InnerText = "&#8677;";
+                fromTimeDiv.AppendChild(d);
+                XmlElement d2 = doc.CreateElement("span");
+                d2.InnerText = $")";
+                fromTimeDiv.AppendChild(d2);
+            }
 
             FlightRecord f = slot.flight;
             int radius = 0;
             //if (slot.left == 0) {
             //    radius = 0;
             //}
-
 
             XmlElement fltDiv = doc.CreateElement("div");
 
@@ -464,9 +457,7 @@ namespace AMSGet {
             //Horizontal position in the row
             fltDiv.SetAttribute("style", $"width:{width}px; border-radius:{radius}px; ");
 
-
-
-            // Clsss dependand on whether it is on a downgraded stand. 
+            // Clsss dependand on whether it is on a downgraded stand.
             if (slot.onDowngrade) {
                 string clazz = "ondowngradeflight";
                 if (slot.towToStand != null) {
@@ -478,8 +469,6 @@ namespace AMSGet {
                 fltDiv.SetAttribute("class", clazz);
             } else {
                 string clazz = "flightbasic " + f.GetCSSClass(this.fltMap);
-
-
 
                 //if (slot.slotStand == "Unallocated") {
                 //    clazz = "flightUnallocated";
@@ -503,7 +492,6 @@ namespace AMSGet {
         }
 
         public XmlElement AddGridRow(StandRecord stand, int rowIndex) {
-
             XmlElement row = doc.CreateElement("div");
 
             int rowHeight = Math.Max(42, 42 * stand.numRows);
@@ -516,7 +504,6 @@ namespace AMSGet {
             XmlElement titleCell = doc.CreateElement("div");
             titleCell.InnerText = stand.name;
             titleCell.SetAttribute("style", $"left:0px; width:150px");
-
 
             row.AppendChild(titleCell);
 
@@ -532,7 +519,6 @@ namespace AMSGet {
         }
 
         public string GetHTML() {
-
             XmlElement timeDiv = doc.CreateElement("div");
             timeDiv.InnerText = $"AMS Gantt Chart @ {DateTime.Now}";
 
@@ -541,13 +527,13 @@ namespace AMSGet {
             body.AppendChild(timeDiv);
             body.AppendChild(GetSets());
 
-            string html = doc.OuterXml.Replace("&amp;nbsp;", "&nbsp;");
+            string html = doc.OuterXml.Replace("&amp;nbsp;", "&nbsp;")
+                .Replace("&amp;#8614;", "&#8614;")
+                .Replace("&amp;#8677;", "&#8677;");
             return html;
         }
 
         public XmlElement GetSets() {
-
-
             XmlElement setsDiv = doc.CreateElement("div");
 
             foreach (string setName in this.sets) {
