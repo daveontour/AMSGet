@@ -106,7 +106,6 @@
     background-image: linear-gradient(90deg, #800000, #c8ef15);
 }
 
-
 .flightUnallocated {
     background: pink;
     color: black;
@@ -170,4 +169,29 @@
 
 .fromStand {
     border-right: 2px dotted black;
+}
+
+.standClubB {
+    background: #00CED1;
+    color: black;
+}
+
+.standClubC {
+    background: #7CFC00;
+    color: black;
+}
+
+.standClubD {
+    background: #FFA500;
+    color: black;
+}
+
+.standClubE {
+    background: #9370D8;
+    color: white;
+}
+
+.standClubF {
+    background: #B22222;
+    color: white;
 }

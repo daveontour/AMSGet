@@ -176,7 +176,9 @@ namespace AMSUtilLib {
             this.sto = GetValue(el, "./ams:FlightState/ams:ScheduledTime", nsmgr);
             this.flightUniqueID = GetValue(el, "./ams:FlightState/ams:Value[@propertyName='FlightUniqueID']", nsmgr);
 
-            this.violateRule = bool.Parse(GetValue(el, "./ams:FlightState/ams:Value[@propertyName='B---_Violate_Rule']", nsmgr));
+            //this.violateRule = bool.Parse(GetValue(el, "./ams:FlightState/ams:Value[@propertyName='B---_Violate_Rule']", nsmgr));
+
+            Boolean.TryParse(GetValue(el, "./ams:FlightState/ams:Value[@propertyName='B---_Violate_Rule']", nsmgr), out violateRule);
 
             DateTime.TryParse(sto, out this.stoDate);
 
@@ -384,6 +386,7 @@ namespace AMSUtilLib {
         public string area;
         public int sortOrder;
         public int numRows = 1;
+        public string clubGrouping;
         public List<DownGradeRecord> downgradeList = new List<DownGradeRecord>();
         public List<SlotRecord> slotList = new List<SlotRecord>();
         public List<TowRecord> fromTows = new List<TowRecord>();
@@ -394,6 +397,8 @@ namespace AMSUtilLib {
             this.id = stand.SelectSingleNode("./Id").InnerText;
             this.area = stand.SelectSingleNode("./Area").InnerText;
             this.sortOrder = int.Parse(stand.SelectSingleNode("./SortOrder").InnerText);
+            this.clubGrouping = stand.SelectSingleNode("./CustomFields/CustomField[Name/text() = 'STAND CLUBING']/Value")?.InnerText;
+            //Console.WriteLine(stand.SelectSingleNode("./CustomFields/CustomField[Name/text() = 'S---_ParkingStandType']/Value")?.InnerText);
         }
 
         public StandRecord() {

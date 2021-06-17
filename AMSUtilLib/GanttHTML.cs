@@ -505,6 +505,11 @@ namespace AMSGet {
             titleCell.InnerText = stand.name;
             titleCell.SetAttribute("style", $"left:0px; width:150px");
 
+            // 17-06-2021 Added for HIA Club Grouping Coloring
+            if (!string.IsNullOrEmpty(stand.clubGrouping)) {
+                titleCell.SetAttribute("class", $"standClub{stand.clubGrouping}");
+            }
+
             row.AppendChild(titleCell);
 
             for (int i = 0; i < 24; i++) {
