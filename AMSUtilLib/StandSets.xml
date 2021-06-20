@@ -35,4 +35,10 @@
   <Set name="Unallocated">
     <Area name ="Unallocated" />
   </Set>
+  <Set name="Old Apron">
+    <Area name ="APNO" />
+  </Set>
+  <Set name="New Apron">
+    <Area name ="APNN" />
+  </Set>
 </StandSets>

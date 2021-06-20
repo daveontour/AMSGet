@@ -269,10 +269,10 @@ namespace AMSGet {
             //string[] arr = { "flights", "-s" };
             //string[] arr = { "config", "--test" };
             //string[] arr = { "flight", "QR", "517", "--from", "2021/02/28", "--to", "2021/03/01" };
-            //string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--sets", "Unallocated", "HIA", "DIA", "Contingency" };
+            string[] arr = { "gantt", "--html", "C:/Users/dave_/Desktop/test.html", "--sets", "Unallocated", "HIA", "DIA", "Contingency", "Old Apron", "New Apron" };
             //string[] arr = { "towings", "--from", "2021/02/21", "--to", "2021/03/01" };
 
-            //MyMain(arr);
+            MyMain(arr);
             //Console.ReadLine();
 #else
             MyMain(args);
@@ -331,10 +331,6 @@ namespace AMSGet {
         }
 
         private static void SaveGantt(GanttOptions opts) {
-            //if (opts.PDF == null && opts.HTML == null) {
-            //    Console.WriteLine("No output format selected");
-            //    return;
-            //}
             if (opts.Sets == null || opts.Sets.Count() == 0) {
                 Console.WriteLine("No area sets selected");
                 return;

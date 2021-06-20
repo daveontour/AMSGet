@@ -502,13 +502,23 @@ namespace AMSGet {
                 row.SetAttribute("class", "even");
             }
             XmlElement titleCell = doc.CreateElement("div");
-            titleCell.InnerText = stand.name;
-            titleCell.SetAttribute("style", $"left:0px; width:150px");
+            titleCell.SetAttribute("style", $"left:0px; width:150px; height: {rowHeight}px;");
 
             // 17-06-2021 Added for HIA Club Grouping Coloring
             if (!string.IsNullOrEmpty(stand.clubGrouping)) {
                 titleCell.SetAttribute("class", $"standClub{stand.clubGrouping}");
             }
+
+            XmlElement title = doc.CreateElement("div");
+            title.InnerText = stand.name;
+            title.SetAttribute("style", $"left:0px; position:absolute; top:50%");
+
+            // 17-06-2021 Added for HIA Club Grouping Coloring
+            if (!string.IsNullOrEmpty(stand.clubGrouping)) {
+                title.SetAttribute("class", $"standClub{stand.clubGrouping}");
+            }
+
+            titleCell.AppendChild(title);
 
             row.AppendChild(titleCell);
 
